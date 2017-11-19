@@ -191,6 +191,10 @@ if __name__ == '__main__':
         if high_index == -1 and high_chapter in chapter:
             high_index = index
 
+    if low_index > high_index:
+        print("Indices are exchanged!")
+        low_index, high_index = high_index, low_index
+
 
     required_list = list_of_hrefs[low_index: high_index + 1]
 
