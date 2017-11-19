@@ -9,7 +9,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import Select
 import urllib.request 
 import os
-
+import sys
 import make_pdf
 
 """
@@ -32,9 +32,13 @@ def get_title_and_chapter_links(driver, url_to_series):
     """
     driver.get(url_to_series)
 
-    title_tag = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME,"bigChar")))
-    title_text = title_tag.text
-    
+    try:
+        title_tag = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME,"bigChar")))
+        title_text = title_tag.text
+    except TimeoutException:
+        print("Exception Occured:    TimeoutException")
+        sys.exit("Couldn't get title!")
+
     list_of_a_tags = driver.find_elements_by_xpath("//tbody/tr/td/a")
 
     # Reversing to get ascending list,
@@ -56,7 +60,12 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
     # Going to first page
     driver.get(url_to_chapter)
 
-    drop_down_list = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID,"selectReadType")))
+    try:
+        drop_down_list = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID,"selectReadType")))
+    except TimeoutException:
+        print("Exception Occured:    TimeoutException")
+        sys.exit("Couldn't load chapter!")
+ 
     select = Select(drop_down_list)
 
     # Selecting the 'All Pages' option
