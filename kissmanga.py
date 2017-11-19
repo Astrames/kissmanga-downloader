@@ -22,8 +22,9 @@ def init_driver():
     Returns a driver object.
     """
 
-    driver = webdriver.Chrome()
-    
+    #driver = webdriver.Chrome()
+    driver = webdriver.PhantomJS()
+
     # driver.wait = WebDriverWait(driver, 5)
     return driver
 
