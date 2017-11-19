@@ -112,53 +112,6 @@ def create_series_folder(title):
         print(title +" folder didnt exist, it has been created")
         os.makedirs(title)
 
-
-def main1():
-    """
-    # Basic working of app
-    url = input("Input url to kissmanga page: ")
-
-    driver = init_driver()
-    title, list_of_hrefs = get_title_and_chapter_links(driver, url)
-
-    """
-
-
-    # For downloading one chapter
-    # download_pages_of_one_chapter(driver, list_of_hrefs[0])
-
-    # To get indexes of the chapters to be downloaded:
-    """
-    low_chapter = input("Enter lower chapter url:")
-    high_chapter = input("Enter higher chapter url:")
-
-    low_index = -1
-    high_index = -1
-
-    for index, chapter in enumerate(list_of_hrefs):
-        if low_index == -1 and low_chapter in chapter:
-            low_index = index
-        if high_index == -1 and high_chapter in chapter:
-            high_index = index
-
-    
-
-    print(low_index, high_index)
-
-    """
-
-    print(os.getcwd())
-    # Navigates to directory
-    os.chdir("Akatsuki!! Otokojuku")
-
-    print(os.getcwd())
-    
-
-
-    # driver.quit()
-
-
-
 if __name__ == '__main__':
 
     # Basic working of app
