@@ -19,6 +19,26 @@ sample url =
 http://kissmanga.com/Manga/Sensei-Lock-On
 http://kissmanga.com/Manga/Dragon-Ball
 """
+class ClassName(object):
+    """docstring for ClassName"""
+    def __init__(self, arg):
+        super(ClassName, self).__init__()
+        self.arg = arg
+        
+
+class  DriverX(object):
+    """docstring for  driverX"""
+    def __init__(self):
+        super(DriverX, self).__init__()
+        self.driver = init_driver()
+
+    def __enter__(self):
+        return self.driver
+
+    def __exit__(self, type, value, traceback):
+        pass    
+
+
 def init_driver():
     """
     Returns a driver object.
@@ -120,13 +140,13 @@ def create_series_folder(title):
         print(title +" folder didnt exist, it has been created")
         os.makedirs(title)
 
-def main2():
+def main2(driver):
     # Basic working of app
     
     # Get main page of the series
     url = input("Input url to kissmanga page: ")
 
-    driver = init_driver()
+    # driver = init_driver()
     title, list_of_hrefs = get_title_and_chapter_links(driver, url)
 
     # Create folder for the series, if it doesn't exist
@@ -191,4 +211,6 @@ def main2():
     input("Press enter to exit")
 
 if __name__ == '__main__':
-    main2()
+
+    with DriverX() as driver:
+        main2(driver)
