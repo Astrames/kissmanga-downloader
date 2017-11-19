@@ -21,7 +21,13 @@ def init_driver():
     """
     Returns a driver object.
     """
-    driver = webdriver.PhantomJS()
+    dcap = dict(DesiredCapabilities.PHANTOMJS)
+    dcap["phantomjs.page.settings.userAgent"] = (
+     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/53 "
+     "(KHTML, like Gecko) Chrome/15.0.87")
+
+    # Setting the user agent to a human browser
+    driver = webdriver.PhantomJS(desired_capabilities = dcap)
     return driver
 
 
@@ -112,8 +118,7 @@ def create_series_folder(title):
         print(title +" folder didnt exist, it has been created")
         os.makedirs(title)
 
-if __name__ == '__main__':
-
+def main2():
     # Basic working of app
     
     # Get main page of the series
@@ -182,3 +187,6 @@ if __name__ == '__main__':
 
 
     input("Press enter to exit")
+
+if __name__ == '__main__':
+    main2()
