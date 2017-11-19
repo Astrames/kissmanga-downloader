@@ -21,11 +21,7 @@ def init_driver():
     """
     Returns a driver object.
     """
-
-    #driver = webdriver.Chrome()
     driver = webdriver.PhantomJS()
-
-    # driver.wait = WebDriverWait(driver, 5)
     return driver
 
 
@@ -39,19 +35,14 @@ def get_title_and_chapter_links(driver, url_to_series):
     title_tag = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME,"bigChar")))
     title_text = title_tag.text
     
-    # Debug statement
-    # print(title_text)
-
-    # tbody = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.NAME,"tbody")))
-    
     list_of_a_tags = driver.find_elements_by_xpath("//tbody/tr/td/a")
 
-    # Reversing since it is originally in descending order
+    # Reversing to get ascending list,
+    # since it is originally in descending order
     list_of_a_tags = list_of_a_tags[::-1]
 
     list_of_href = []
     for a_tag in list_of_a_tags:
-        # print("{0}  == {1}".format(a_tag.text,a_tag.get_attribute('href')))
         list_of_href.append(a_tag.get_attribute('href'))
 
     return title_text, list_of_href
@@ -65,27 +56,16 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
     # Going to first page
     driver.get(url_to_chapter)
 
-    ''' 
-    # Process to get image src for each page
-    image_tag = driver.find_element_by_xpath('//div[@id="divImage"]/img')
-    print(image_tag.get_attribute('src'))
-    '''
-
-    # Doesn't work when using from Python shell
-    # select = Select(driver.find_element_by_id("selectReadType"))
-
-    # Alternative try
     drop_down_list = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID,"selectReadType")))
     select = Select(drop_down_list)
 
+    # Selecting the 'All Pages' option
     select.select_by_value('1')
 
     list_of_page_img = driver.find_elements_by_xpath('//div[@id="divImage"]/p/img')
 
     chapter_name = url_to_chapter[url_to_chapter.rfind('/') + 1 : url_to_chapter.rfind('?')]
-    # chapter_name = chapter_name[:chapter_name.find('?') + 1]
-
-    # Debug statement
+    
     print("Chapter name is " + chapter_name)
 
     # Create folder for chapter , if it not exist
@@ -94,28 +74,18 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
         os.makedirs(chapter_name)
 
 
-
+    print("###################################")
     print("Downloading Chapter "+ chapter_name)
     
-
-
-
     page_no = 1
     for page in list_of_page_img:
-        
-        # Debug statement
-        # print(page.get_attribute("src"))
-        
+    
         page_no_correct = str(page_no).zfill(3)
-
         url = page.get_attribute("src")
         filepath = chapter_name + "\\" + page_no_correct+".jpg"
 
         # Current folder
         pwd = os.path.dirname(os.path.realpath(__file__))
-
-        
-
         #Creating full file name
         fullfilename = os.path.join(pwd, filepath)
         
@@ -124,11 +94,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
         else:
             print("Downloading Page " + page_no_correct + " ...")
             urllib.request.urlretrieve(url, fullfilename)
-        
-
         page_no += 1
-
-
     pass
     
 
@@ -194,8 +160,6 @@ if __name__ == '__main__':
     driver = init_driver()
     title, list_of_hrefs = get_title_and_chapter_links(driver, url)
 
-    
-    
     # Create folder for the series, if it doesn't exist
     create_series_folder(title)
 
