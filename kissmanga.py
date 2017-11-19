@@ -11,6 +11,8 @@ import urllib.request
 import os
 import sys
 import make_pdf
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
 
 """
 sample url = 
