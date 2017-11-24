@@ -143,9 +143,60 @@ def create_series_folder(title):
         print(title +" folder didnt exist, it has been created")
         os.makedirs(title)
 
+# Global variables to be used
+bool_dict = {
+    'Page Zero' : False,
+    'Issue PDF' : True,
+    'Series PDF' : False,
+}
+
+def init_settings():
+    """
+    Initialize global boolean variables
+    """
+
+    with open('settings.ini') as settings:
+        for i, line in enumerate(settings):
+
+            if line.startswith('$'):
+                index = line.find('=')
+                arg = line[1:index]
+                arg = arg.strip()
+
+                boolStr = line[index+1:-1]
+                boolStr = boolStr.strip()
+
+                # Debug statement
+                print("Setting:", arg, ",Bool:" , boolStr)
+
+                """
+                if arg is 'Page Zero':
+                    bool_page0 = boolStr == 'True'
+                if arg is 'Issue PDF':
+                    bool_issue_pdf = boolStr == 'True'
+                if arg is 'Series PDF':
+                    bool_series_pdf = boolStr == 'True'
+                """
+
+                if arg in bool_dict:
+                    bool_dict[arg] = (boolStr == 'True')
+
+
+
+        # Debug statement
+        print('Final settings')
+        for key, value in bool_dict.items():
+            print(key,":", value)
+
+
+
 def main2(driver):
     # Basic working of app
     
+    # Initialize arguments
+    init_settings()
+
+
     # Get main page of the series
     url = input("Input url to kissmanga page: ")
 
@@ -216,4 +267,3 @@ def main2(driver):
 if __name__ == '__main__':
     with DriverX() as driver:
         main2(driver)
-        
