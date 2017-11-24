@@ -22,13 +22,8 @@ def get_list_image_paths(imageDirectory):
 		for single_file in files:
 			if ".jpg" in single_file:
 				full_path = join(root, single_file)
-				# print(full_path)
 				list_full_names.append(full_path)
 
-		# print (root, "consumes", end=' ')
-		# print(sum(getsize(join(root,name)) for name in files), end=' ')
-		# print("bytes in", len(files), "non-directory files")
-	# print(list_full_names)
 	return list_full_names
 
 
@@ -79,8 +74,6 @@ def merge_pdfs(folder_with_pdfs, outputPDFName=None):
 				for pageIndex in range(0, pdfOne.getNumPages()):
 					output.addPage(pdfOne.getPage(pageIndex))
 
-				# output.addPage(pdfOne.getPage(0))
-
 	outputStream = open( join(root, outputPDFName) , "wb")
 	output.write(outputStream)
 	outputStream.close()
@@ -89,10 +82,6 @@ def create_subfolder_pdf(parentFolder):
     for root, dirs, files in os.walk(parentFolder):
         for dir in dirs:
             create_pdf(os.path.join(root, dir))
-
-
-
-
 
 if __name__ == '__main__':
 	pass
