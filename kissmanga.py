@@ -246,16 +246,19 @@ def main2(driver):
     input("Press enter to continue.")
 
 
-    # Active directory is inside the series folder:
-    # Create the PDF, from the chapters inside
-    mypath = os.getcwd()
-    for root, dirs, files in os.walk(mypath):
-        for single_dir in dirs:
-            pdfMaker.create_pdf(single_dir)
+    if bool_dict['Issue PDF']:
+        # Active directory is inside the series folder:
+        # Create the PDF, from the chapters inside
+        mypath = os.getcwd()
+        for root, dirs, files in os.walk(mypath):
+            for single_dir in dirs:
+                pdfMaker.create_pdf(imageDirectory=single_dir,
+                                    bool_page0=bool_dict['Page Zero'])
 
 
-    # Current folder has all the .pdf of the chapter folders
-    pdfMaker.merge_pdfs(os.getcwd())
+    if bool_dict['Series PDF']:
+        # Current folder has all the .pdf of the chapter folders
+        pdfMaker.merge_pdfs(os.getcwd())
 
     # Go back to start_folder
     os.chdir(start_folder)

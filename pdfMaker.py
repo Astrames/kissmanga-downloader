@@ -1,7 +1,9 @@
 from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 import os
 from os.path import join, getsize
 import PIL
+from PIL import ImageDraw
 from PyPDF2 import PdfFileReader, PdfFileWriter
 
 
@@ -26,8 +28,65 @@ def get_list_image_paths(imageDirectory):
 
 	return list_full_names
 
+def create_canvas(imageDirectory, namePDF, bool_page0):
+	"""
+	Creates a canvas object, with or without page 0 according 
+	to supplied args
+	"""
+	if bool_page0 is False:
+		c = canvas.Canvas(namePDF)
+		return c
+	else:
 
-def create_pdf(imageDirectory, outputPDFName=None):
+		print("Creating Page 000 ...")
+
+		WIDTH = HEIGHT = int( 500 )
+		page0_size = (WIDTH, HEIGHT)
+
+		c = canvas.Canvas(namePDF, page0_size)
+
+		# Creating page 000
+		white = (255, 255, 255, 255)
+		black = (0, 0, 0, 255)
+
+		page0 = PIL.Image.new('RGBA', page0_size, white)
+
+		# Colored Rectangle
+		im = ImageDraw.Draw(page0)
+		whiteMargin = 20
+		blackOutline = 3
+		im.rectangle([whiteMargin, whiteMargin, WIDTH - whiteMargin, HEIGHT - whiteMargin], fill=black)
+		im.rectangle([whiteMargin + blackOutline, whiteMargin + blackOutline,
+		 WIDTH - (whiteMargin + blackOutline), HEIGHT - (whiteMargin + blackOutline)],
+		 fill=white)
+
+		im = ImageReader(page0)
+		c.drawImage(im, 0 , 0)
+		font_size = 37
+		c.setFont("Helvetica", font_size)
+
+		if True: # For clarity, ie indentation purposes
+			# METHOD 2
+			# Not centred perfectly
+			title = os.path.basename(imageDirectory)
+			n = 12
+
+			correct_title = []
+			for i in range(0, len(title), n):
+				correct_title.append(title[i:i+n])
+			
+			textObject = c.beginText( WIDTH/2 - WIDTH/4, HEIGHT/2 )
+			
+			for line in correct_title:
+				textObject.textLine(line)
+			c.drawText(textObject)
+		c.showPage()
+
+		return c
+
+
+
+def create_pdf(imageDirectory, bool_page0, outputPDFName=None):
 	"""
 	Creates a single PDF from a folder full of images.
 	"""
@@ -42,8 +101,9 @@ def create_pdf(imageDirectory, outputPDFName=None):
 		return
 
 
-	c = canvas.Canvas(namePDF) #, page0_size)
+	# c = canvas.Canvas(namePDF) #, page0_size)
 
+	c = create_canvas(imageDirectory, namePDF, bool_page0)
 
 
 	for page_path in get_list_image_paths(imageDirectory):
@@ -65,6 +125,17 @@ def merge_pdfs(folder_with_pdfs, outputPDFName=None):
 		outputPDFName = str(folder_with_pdfs) + ".pdf"
 	
 	mypath = folder_with_pdfs
+
+	# To get range of PDFs used
+	for root, dirs, files in os.walk(mypath):
+		D = dirs[0]
+		break
+
+	included_pdf = '(' + D[0] + ' - ' + D[-1] + ')'
+
+
+	outputPDFName = outputPDFName.replace('.pdf',included_pdf+'.pdf')
+
 
 	for root, dirs, files in os.walk(mypath):
 		for single_file in files:
