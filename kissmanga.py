@@ -10,7 +10,7 @@ from selenium.webdriver.support.ui import Select
 import urllib.request 
 import os
 import sys
-import make_pdf
+import pdfMaker
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 
@@ -197,11 +197,11 @@ def main2(driver):
     mypath = os.getcwd()
     for root, dirs, files in os.walk(mypath):
         for single_dir in dirs:
-            make_pdf.pdf_from_images(single_dir)
+            pdfMaker.create_pdf(single_dir)
 
 
     # Current folder has all the .pdf of the chapter folders
-    make_pdf.merge_pdfs(os.getcwd())
+    pdfMaker.merge_pdfs(os.getcwd())
 
     # Go back to start_folder
     os.chdir(start_folder)
