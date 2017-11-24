@@ -49,7 +49,10 @@ def init_driver():
      "(KHTML, like Gecko) Chrome/15.0.87")
 
     # Setting the user agent to a human browser
-    driver = webdriver.PhantomJS(desired_capabilities = dcap)
+    driver = webdriver.PhantomJS(
+        desired_capabilities = dcap,
+        service_args=['--load-images=false']
+        )
     return driver
 
 
@@ -211,6 +214,6 @@ def main2(driver):
     input("Press enter to exit")
 
 if __name__ == '__main__':
-
     with DriverX() as driver:
         main2(driver)
+        
