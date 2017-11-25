@@ -128,7 +128,7 @@ def merge_pdfs(folder_with_pdfs, outputPDFName=None):
 
 	# To get range of PDFs used
 	for root, dirs, files in os.walk(mypath):
-		D = dirs[0]
+		D = dirs
 		break
 
 	included_pdf = '(' + D[0] + ' - ' + D[-1] + ')'
