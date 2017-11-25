@@ -241,6 +241,8 @@ def main2(driver):
 
 
     print("Chapters have been downloaded.")
+    driver.quit()
+    
     print("Make any required renames for the chapter folders, if you wish.")
     print("DO NOT RENAME THE SERIES FOLDER")
     input("Press enter to continue.")
@@ -262,7 +264,7 @@ def main2(driver):
 
     # Go back to start_folder
     os.chdir(start_folder)
-    driver.quit()
+    
 
 
     input("Press enter to exit")
