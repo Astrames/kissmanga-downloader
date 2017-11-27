@@ -106,15 +106,17 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
 
     chapter_name = url_to_chapter[url_to_chapter.rfind('/') + 1 : url_to_chapter.rfind('?')]
     
-    print("Chapter name is " + chapter_name)
+    
+
+    # print("Chapter name is " + chapter_name)
 
     # Create folder for chapter , if it not exist
     if not os.path.exists(chapter_name):
         print("Chapter "+ chapter_name +" folder didnt exist, it has been created")
         os.makedirs(chapter_name)
 
+    print('\n',"#"*50,"\n",sep='')
 
-    print("###################################")
     print("Downloading Chapter "+ chapter_name)
     
     page_no = 1
@@ -135,6 +137,9 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
             print("Downloading Page " + page_no_correct + " ...")
             urllib.request.urlretrieve(url, fullfilename)
         page_no += 1
+    
+    print('\n',"#"*50,"\n",sep='')
+
     pass
     
 
@@ -166,28 +171,15 @@ def init_settings():
                 boolStr = line[index+1:-1]
                 boolStr = boolStr.strip()
 
-                # Debug statement
-                print("Setting:", arg, ",Bool:" , boolStr)
-
-                """
-                if arg is 'Page Zero':
-                    bool_page0 = boolStr == 'True'
-                if arg is 'Issue PDF':
-                    bool_issue_pdf = boolStr == 'True'
-                if arg is 'Series PDF':
-                    bool_series_pdf = boolStr == 'True'
-                """
-
                 if arg in bool_dict:
                     bool_dict[arg] = (boolStr == 'True')
 
-
-
         # Debug statement
+        print('\n',"#"*50,"\n",sep='')
         print('Final settings')
         for key, value in bool_dict.items():
             print(key,":", value)
-
+        print('\n',"#"*50,"\n",sep='')
 
 
 def main2(driver):
@@ -196,11 +188,9 @@ def main2(driver):
     # Initialize arguments
     init_settings()
 
-
     # Get main page of the series
     url = input("Input url to kissmanga page: ")
 
-    # driver = init_driver()
     title, list_of_hrefs = get_title_and_chapter_links(driver, url)
 
     # Create folder for the series, if it doesn't exist
@@ -212,9 +202,13 @@ def main2(driver):
     # Navigate inside the series folder
     os.chdir(title)
 
+    print('\n',"#"*50,"\n",sep='')
+
     # Get indexes of the chapters to be downloaded
     low_chapter = input("Enter lower chapter url:")
     high_chapter = input("Enter higher chapter url:")
+
+    print('\n',"#"*50,"\n",sep='')
 
     low_index = -1
     high_index = -1
@@ -239,6 +233,7 @@ def main2(driver):
         # Download a chapter
         download_pages_of_one_chapter(driver, href)
 
+    print('\n',"#"*50,"\n",sep='')
 
     print("Chapters have been downloaded.")
     driver.quit()
@@ -246,6 +241,8 @@ def main2(driver):
     print("Make any required renames for the chapter folders, if you wish.")
     print("DO NOT RENAME THE SERIES FOLDER")
     input("Press enter to continue.")
+
+    print('\n',"#"*50,"\n",sep='')
 
 
     if bool_dict['Issue PDF']:
@@ -265,8 +262,6 @@ def main2(driver):
     # Go back to start_folder
     os.chdir(start_folder)
     
-
-
     input("Press enter to exit")
 
 if __name__ == '__main__':
