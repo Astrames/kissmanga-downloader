@@ -83,7 +83,7 @@ def create_canvas(imageDirectory, namePDF, bool_page0):
 
 
 
-def create_pdf(imageDirectory, bool_page0, outputPDFName=None):
+def create_pdf(imageDirectory, bool_page0, overwriteExisting=False, outputPDFName=None):
 	"""
 	Creates a single PDF from a folder full of images.
 	"""
@@ -95,8 +95,12 @@ def create_pdf(imageDirectory, bool_page0, outputPDFName=None):
 	# to prevent unnecessary overwrites
 	if os.path.exists(namePDF):
 		print(os.path.basename(namePDF), " already exists!")
-		return
-
+		if overwriteExisting is False:			
+			return
+		else:
+			print("Over writing",os.path.basename(namePDF),"...")
+	else:
+		print("Creating ", os.path.basename(namePDF))
 
 	# c = canvas.Canvas(namePDF) #, page0_size)
 

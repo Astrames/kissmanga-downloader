@@ -152,6 +152,7 @@ bool_dict = {
     'Page Zero' : False,
     'Issue PDF' : True,
     'Series PDF' : False,
+    'Overwrite PDF' : False,
 }
 
 acceptedValuesTrue = ['True', 'true', 'Yes', 'Y', 'yes', 'y']
@@ -258,7 +259,9 @@ def main2(driver):
         for root, dirs, files in os.walk(mypath):
             for single_dir in dirs:
                 pdfMaker.create_pdf(imageDirectory=single_dir,
-                                    bool_page0=bool_dict['Page Zero'])
+                                    bool_page0=bool_dict['Page Zero'],
+                                    overwriteExisting=bool_dict['Overwrite PDF']
+                                    )
 
 
     if bool_dict['Series PDF']:
