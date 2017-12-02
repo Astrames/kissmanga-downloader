@@ -58,7 +58,7 @@ Inside this file, you can choose appropriate parameters for downloading manga.
 
 `Page Zero` represents if you want to create a title page, which has the name of the chapter written on it. This is useful when you are reading a `Series PDF` and you wish to know which chapter you are currently reading.
 
-
+`Overwrite PDF` represents if you want to overwrite the already created PDF(which you may have created earlier), with new PDF created with different settings.
 
 
 ## Usage
