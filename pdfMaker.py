@@ -37,9 +37,6 @@ def create_canvas(imageDirectory, namePDF, bool_page0):
 		c = canvas.Canvas(namePDF)
 		return c
 	else:
-
-		print("Creating Page 000 ...")
-
 		WIDTH = HEIGHT = int( 500 )
 		page0_size = (WIDTH, HEIGHT)
 

@@ -113,9 +113,8 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
     # Create folder for chapter , if it not exist
     if not os.path.exists(chapter_name):
         print("Chapter "+ chapter_name +" folder didnt exist, it has been created")
+        print()
         os.makedirs(chapter_name)
-
-    print('\n',"#"*50,"\n",sep='')
 
     print("Downloading Chapter "+ chapter_name)
     
@@ -176,7 +175,7 @@ def init_settings():
 
         # Debug statement
         print('\n',"#"*50,"\n",sep='')
-        print('Final settings')
+        print('Program Settings:')
         for key, value in bool_dict.items():
             print(key,":", value)
         print('\n',"#"*50,"\n",sep='')
@@ -233,8 +232,6 @@ def main2(driver):
         # Download a chapter
         download_pages_of_one_chapter(driver, href)
 
-    print('\n',"#"*50,"\n",sep='')
-
     print("Chapters have been downloaded.")
     driver.quit()
     
@@ -244,6 +241,7 @@ def main2(driver):
 
     print('\n',"#"*50,"\n",sep='')
 
+    print("Creating PDFs now...\n")
 
     if bool_dict['Issue PDF']:
         # Active directory is inside the series folder:
