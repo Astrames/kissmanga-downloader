@@ -182,6 +182,11 @@ def init_settings():
 
 
 def main2(driver):
+    # Author sign
+    print(" "*15, "="*50)
+    print(" "*(15+17), "Author: Astrames")
+    print(" "*15, "="*50)
+
     # Basic working of app
     
     # Initialize arguments
