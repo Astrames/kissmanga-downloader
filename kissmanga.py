@@ -154,6 +154,9 @@ bool_dict = {
     'Series PDF' : False,
 }
 
+acceptedValuesTrue = ['True', 'true', 'Yes', 'Y', 'yes', 'y']
+acceptedValuesFalse = ['False', 'false', 'No', 'N', 'no', 'n']
+
 def init_settings():
     """
     Initialize global boolean variables
@@ -171,7 +174,7 @@ def init_settings():
                 boolStr = boolStr.strip()
 
                 if arg in bool_dict:
-                    bool_dict[arg] = (boolStr == 'True')
+                    bool_dict[arg] = (boolStr in acceptedValuesTrue)
 
         # Debug statement
         print('\n',"#"*50,"\n",sep='')
