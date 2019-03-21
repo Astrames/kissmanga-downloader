@@ -91,18 +91,16 @@ def create_pdf(imageDirectory, bool_page0, overwriteExisting=False, outputPDFNam
 
 	# to prevent unnecessary overwrites
 	if os.path.exists(namePDF):
-            print(os.path.basename(namePDF) + ":", "already exists!")
+            print(os.path.basename(namePDF) + ":", "exists", end="")
             if overwriteExisting is False:
+                print()
                 return
             else:
-                print("Over writing",os.path.basename(namePDF),"...")
+                print(" -> overwriting")
 	else:
-		print("Creating ", os.path.basename(namePDF))
-
-	# c = canvas.Canvas(namePDF) #, page0_size)
+            print(os.path.basename(namePDF) + ": does not exist -> creating")
 
 	c = create_canvas(imageDirectory, namePDF, bool_page0)
-
 
 	for page_path in get_list_image_paths(imageDirectory):
 		w, h = get_width_height(page_path)

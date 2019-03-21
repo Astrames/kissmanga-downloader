@@ -141,7 +141,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
                     d.write(con.read())
             except:
                 # Skip, not available
-                print("(error)", end="")
+                print("(ERROR)", end="")
             
         sys.stdout.flush()
         page_no += 1
@@ -228,6 +228,7 @@ def process(driver):
         # Create the PDF, from the chapters inside
         mypath = os.getcwd()
         for root, dirs, files in os.walk(mypath):
+            dirs.sort()
             for single_dir in dirs:
                 pdfMaker.create_pdf(imageDirectory=single_dir,
                                     bool_page0=args.pagezero,
