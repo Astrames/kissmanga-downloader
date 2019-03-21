@@ -54,6 +54,11 @@ optional arguments:
   --ow               Overwrite existing PDF files
 ```
 
+For instance, to get the first 100 chapters of Dragon Ball, generating only chapter PDFs and adding a title page to each chapter:
+
+```bash
+$  kissmanga-downloader -u Dragon-Ball -i 1 -e 100 --pdf --pagezero --ow
+```
 
 ## Features
 
