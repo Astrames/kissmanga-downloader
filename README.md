@@ -1,6 +1,7 @@
 # kissmanga-downloader
 
 Python script to batch-download images from [Kissmanga](https://kissmanga.com) and optionally convert them to PDF.
+Forked from [Astrames/kissmanga-downloader](https://github.com/Astrames/kissmanga-downloader) and improved upon.
 
 ## Dependecies
 
