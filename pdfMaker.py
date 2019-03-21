@@ -18,6 +18,7 @@ def get_list_image_paths(imageDirectory):
 
 	list_full_names = []
 	for root, dirs, files in os.walk(mypath):
+                dirs.sort()
 		for single_file in files:
 			if ".jpg" in single_file:
 				full_path = join(root, single_file)
