@@ -114,11 +114,9 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
 
     # Create folder for chapter , if it not exist
     if not os.path.exists(chapter_folder_name):
-        print("Chapter "+ chapter_folder_name +" folder didnt exist, it has been created")
-        print()
         os.makedirs(chapter_folder_name)
 
-    print("Downloading Chapter "+ chapter_name + " into " + chapter_folder_name)
+    print("Chapter "+ chapter_name + " -> " + chapter_folder_name + os.pathsep)
     
     page_no = 1
     for page in list_of_page_img:
@@ -133,19 +131,24 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
         fullfilename = os.path.join(pwd, filepath)
         
         if os.path.exists(fullfilename):
-            print("File " + page_no_correct + " exists! Skipping file...")
+            print(" " + page_no_correct + "(exists)", end="")
         else:
-            print("Downloading Page " + page_no_correct + " ...")
-            req = urllib.request.Request(url, headers={'User-Agent' : "Magic Browser"})
-            con = urllib.request.urlopen(req)
-            with open(fullfilename, mode="wb") as d:
-                d.write(con.read())
+            print(" " + page_no_correct, end="")
+            try:
+                req = urllib.request.Request(url, headers={'User-Agent' : "Magic Browser"})
+                con = urllib.request.urlopen(req)
+                with open(fullfilename, mode="wb") as d:
+                    d.write(con.read())
+            except:
+                # Skip, not available
+                print("(error)", end="")
             
-            #urllib.request.urlretrieve(url, fullfilename, user_agents)
+        sys.stdout.flush()
         page_no += 1
-    
-    print('\n',"#"*50,"\n",sep='')
 
+    print()
+    print()
+    
     pass
     
 def create_series_folder(title):
@@ -169,8 +172,8 @@ def process(driver):
     # Parse arguments
     parser = argparse.ArgumentParser(description="Batch-download chapters and series from Kissmanga")
     parser.add_argument('-u', '--url', required=True, type=str, help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.com/Manga/Dragon-Ball' use'Dragon-Ball)")
-    parser.add_argument('-i', '--ini', required=True, type=int, help="Initial chapter number")
-    parser.add_argument('-e', '--end', required=True, type=int, help="Final chapter number")
+    parser.add_argument('-i', '--ini', required=True, type=int, help="Initial chapter number to download, in [1..n]")
+    parser.add_argument('-e', '--end', required=True, type=int, help="Final chapter number to download, included")
     parser.add_argument('--pdf', required=False, action='store_true', help="Generate a PDF file for each chapter")
     parser.add_argument('--pdfseries', required=False, action='store_true', help="Generate a huge PDF file with all chapters")
     parser.add_argument('--pagezero', required=False, action='store_true', help="Create title page for each chapter")
@@ -179,6 +182,8 @@ def process(driver):
     args = parser.parse_args()
 
     # Get main page of the series
+
+    print("Initialising kissmanga-downloader")
 
     url = args.url if 'kissmanga.com' in dequote(args.url) else base_url + dequote(args.url)
 
@@ -196,11 +201,17 @@ def process(driver):
     low_index = args.ini
     high_index = args.end
 
-    if low_index > high_index:
-        print("--ini must be lower or equal than --end!")
+    if low_index < 1:
+        print("--ini must be larger than 0: " + low_index)
         exit(0)
 
-    required_list = list_of_hrefs[low_index: high_index + 1]
+    if high_index < low_index:
+        print("--end must be greater or equal than --ini: [%d <= %d]" % (low_index, high_index))
+        exit(0)
+
+    required_list = list_of_hrefs[low_index - 1: high_index - 1]
+
+    print()
 
     # Iterate over the list_of_hrefs for the requested chapters
     for href in required_list:
