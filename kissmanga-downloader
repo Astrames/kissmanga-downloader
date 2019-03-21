@@ -164,7 +164,7 @@ def dequote(s):
     return s
 
 def process(driver):
-    base_url = "https://kissmanga.com/"
+    base_url = "https://kissmanga.com/Manga/"
     
     # Parse arguments
     parser = argparse.ArgumentParser(description="Batch-download chapters and series from Kissmanga")
