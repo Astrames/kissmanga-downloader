@@ -116,7 +116,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
     if not os.path.exists(chapter_folder_name):
         os.makedirs(chapter_folder_name)
 
-    print("Chapter "+ chapter_name + " -> " + chapter_folder_name + os.pathsep)
+    print("Chapter "+ chapter_name + " -> " + chapter_folder_name + os.path.sep)
     
     page_no = 1
     for page in list_of_page_img:
@@ -151,11 +151,6 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
     
     pass
     
-def create_series_folder(title):
-     if not os.path.exists(title):
-        print(title +" folder didnt exist, it has been created")
-        os.makedirs(title)
-
 def dequote(s):
     """
     If a string has single or double quotes around it, remove them.
@@ -171,6 +166,7 @@ def process(driver):
     
     # Parse arguments
     parser = argparse.ArgumentParser(description="Batch-download chapters and series from Kissmanga")
+    parser.add_argument('-o', '--output', type=str, help="Output folder path where the series folder will be created. Defaults to the current path from which this script is run")
     parser.add_argument('-u', '--url', required=True, type=str, help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.com/Manga/Dragon-Ball' use'Dragon-Ball)")
     parser.add_argument('-i', '--ini', required=True, type=int, help="Initial chapter number to download, in [1..n]")
     parser.add_argument('-e', '--end', required=True, type=int, help="Final chapter number to download, included")
@@ -189,14 +185,18 @@ def process(driver):
 
     title, list_of_hrefs = get_title_and_chapter_links(driver, url)
 
+    output_folder = os.getcwd() if args.output is None else args.output
+    series_folder = os.path.join(output_folder, title)
+
     # Create folder for the series, if it doesn't exist
-    create_series_folder(title)
+    if not os.path.exists(series_folder):
+        os.makedirs(series_folder)
 
     # Starting folder
     start_folder = os.getcwd()
 
     # Navigate inside the series folder
-    os.chdir(title)
+    os.chdir(series_folder)
 
     low_index = args.ini
     high_index = args.end
@@ -209,19 +209,19 @@ def process(driver):
         print("--end must be greater or equal than --ini: [%d <= %d]" % (low_index, high_index))
         exit(0)
 
-    required_list = list_of_hrefs[low_index - 1: high_index - 1]
+    required_list = list_of_hrefs[low_index - 1: high_index]
 
-    print()
+    print("Starting chapter download: %d to %d\n" % (low_index, high_index))
 
     # Iterate over the list_of_hrefs for the requested chapters
     for href in required_list:
         # Download a chapter
         download_pages_of_one_chapter(driver, href)
 
-    print("Chapters downloaded")
+    print("%d chapters downloaded successfully" % (high_index - low_index + 1))
     driver.quit()
 
-    print("Creating PDFs now...\n")
+    print("Starting creatinon of PDF files: %d to %d\n" % (low_index, high_index))
 
     if args.pdf:
         # Active directory is inside the series folder:

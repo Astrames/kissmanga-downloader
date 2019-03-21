@@ -36,28 +36,33 @@ No idea, just get and install chromedriver by whatever means you can.
 Here is the output of the `-h` flag:
 
 ```
-usage: kissmanga-downloader [-h] -u URL -i INI -e END [--pdf] [--pdfseries]
-                            [--pagezero] [--ow]
+usage: kissmanga-downloader [-h] [-o OUTPUT] -u URL -i INI -e END [--pdf]                                        
+                            [--pdfseries] [--pagezero] [--ow]
 
 Batch-download chapters and series from Kissmanga
 
 optional arguments:
-  -h, --help         show this help message and exit
-  -u URL, --url URL  Name of the series, no need to include the base kissmanga
-                     URL, so for 'https://kissmanga.com/Manga/Dragon-Ball'
-                     use'Dragon-Ball)
-  -i INI, --ini INI  Initial chapter number
-  -e END, --end END  Final chapter number
-  --pdf              Generate a PDF file for each chapter
-  --pdfseries        Generate a huge PDF file with all chapters
-  --pagezero         Create title page for each chapter
-  --ow               Overwrite existing PDF files
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        Output folder path where the series folder will be
+                        created. Defaults to the current path from which this
+                        script is run
+  -u URL, --url URL     Name of the series, no need to include the base
+                        kissmanga URL, so for
+                        'https://kissmanga.com/Manga/Dragon-Ball' use'Dragon-
+                        Ball)
+  -i INI, --ini INI     Initial chapter number to download, in [1..n]
+  -e END, --end END     Final chapter number to download, included
+  --pdf                 Generate a PDF file for each chapter
+  --pdfseries           Generate a huge PDF file with all chapters
+  --pagezero            Create title page for each chapter
+  --ow                  Overwrite existing PDF files
 ```
 
-For instance, to get the first 100 chapters of Dragon Ball, generating only chapter PDFs and adding a title page to each chapter:
+For instance, to get the first 100 chapters of Dragon Ball, generating only chapter PDFs and adding a title page to each chapter and putting the results in `/output/folder/path`:
 
 ```bash
-$  kissmanga-downloader -u Dragon-Ball -i 1 -e 100 --pdf --pagezero --ow
+$  kissmanga-downloader -u Dragon-Ball -o /output/folder/path -i 1 -e 100 --pdf --pagezero --ow
 ```
 
 ## Features
