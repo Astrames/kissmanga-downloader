@@ -9,11 +9,26 @@ You need Python 3.6+. Then, install the dependencies:
 
 ```bash
 $  pip install -r requirements.txt
+```
+
+### Windows
+
+Download chromedriver from [here](https://sites.google.com/a/chromium.org/chromedriver/downloads) and put it somewhere in your path (probably the same folder where you cloned this repo would be best).
+
+### Linux
+
+Get chromedriver from your distro repository. For example:
+
+```bash
 $  # Ubuntu&co
 $  apt install chromium-chromedriver
 $  # Arch&co
 $  yay -S chromedriver
 ```
+
+### macOS
+
+No idea, just get and install chromedriver by whatever means you can.
 
 
 ## Usage
