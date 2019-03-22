@@ -33,11 +33,12 @@ No idea, just get and install chromedriver by whatever means you can.
 
 ## Usage
 
-Here is the output of the `-h` flag:
+Here is the output of the `kissmanga-download -h`:
 
 ```
-usage: kissmanga-downloader [-h] [-o OUTPUT] -u URL -i INI -e END [--pdf]                                        
-                            [--pdfseries] [--pagezero] [--ow]
+usage: kissmanga-downloader [-h] [-o OUTPUT] -u URL -i INI -e END [--pdf]
+                            [--pdfseries] [--chapter_page] [--delay DELAY]
+                            [--ow]
 
 Batch-download chapters and series from Kissmanga
 
@@ -55,7 +56,9 @@ optional arguments:
   -e END, --end END     Final chapter number to download, included
   --pdf                 Generate a PDF file for each chapter
   --pdfseries           Generate a huge PDF file with all chapters
-  --pagezero            Create title page for each chapter
+  --chapter_page        Create title page for each chapter
+  --delay DELAY         Add a delay (in seconds) between page downloads to
+                        avoid overloading the server
   --ow                  Overwrite existing PDF files
 ```
 

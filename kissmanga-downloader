@@ -82,7 +82,7 @@ def get_title_and_chapter_links(driver, url_to_series):
     return title_text, list_of_href
 
 
-def download_pages_of_one_chapter(driver, url_to_chapter):
+def download_pages_of_one_chapter(driver, url_to_chapter, delay=0):
     """
     Goes through the chapter and downloads each page it encounters
     """
@@ -102,6 +102,9 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
     select.select_by_value('1')
 
     list_of_page_img = driver.find_elements_by_xpath('//div[@id="divImage"]/p/img')
+    img_urls = []
+    for page_img in list_of_page_img:
+        img_urls.append(page_img.get_attribute("src"))
 
     chapter_name = url_to_chapter[url_to_chapter.rfind('/') + 1 : url_to_chapter.rfind('?')]
 
@@ -119,10 +122,9 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
     print("Chapter "+ chapter_name + " -> " + chapter_folder_name + os.path.sep)
     
     page_no = 1
-    for page in list_of_page_img:
+    for img_url in img_urls:
     
         page_no_correct = str(page_no).zfill(3)
-        url = page.get_attribute("src")
         filepath = os.path.join(chapter_folder_name, page_no_correct + ".jpg")
 
         # Current folder
@@ -135,10 +137,12 @@ def download_pages_of_one_chapter(driver, url_to_chapter):
         else:
             print(" " + page_no_correct, end="")
             try:
-                req = urllib.request.Request(url, headers={'User-Agent' : "Magic Browser"})
+                req = urllib.request.Request(img_url, headers={'User-Agent' : "Magic Browser"})
                 con = urllib.request.urlopen(req)
                 with open(fullfilename, mode="wb") as d:
                     d.write(con.read())
+                if delay > 0:
+                    time.sleep(delay)
             except:
                 # Skip, not available
                 print("(ERROR)", end="")
@@ -172,22 +176,41 @@ def process(driver):
     parser.add_argument('-e', '--end', required=True, type=int, help="Final chapter number to download, included")
     parser.add_argument('--pdf', required=False, action='store_true', help="Generate a PDF file for each chapter")
     parser.add_argument('--pdfseries', required=False, action='store_true', help="Generate a huge PDF file with all chapters")
-    parser.add_argument('--pagezero', required=False, action='store_true', help="Create title page for each chapter")
+    parser.add_argument('--chapter_page', required=False, action='store_true', help="Create title page for each chapter")
+    parser.add_argument('--delay', required=False, type=float, help="Add a delay (in seconds) between page downloads to avoid overloading the server")
     parser.add_argument('--ow', required=False, action='store_true', help="Overwrite existing PDF files")
 
     args = parser.parse_args()
 
-    # Get main page of the series
 
     print("Initialising kissmanga-downloader")
 
+    # Get main page of the series
     url = args.url if 'kissmanga.com' in dequote(args.url) else base_url + dequote(args.url)
 
-    title, list_of_hrefs = get_title_and_chapter_links(driver, url)
-
+    # Output folder
     output_folder = os.getcwd() if args.output is None else args.output
+    
+    # Delay between page downloads
+    delay = 0 if args.delay is None or args.delay < 0 else args.delay
+    if delay > 0:
+        print("Using a delay of %.1f seconds" % delay)
+
+    # Chapter page
+    chapter_page = args.chapter_page
+
+    # PDF overwrite
+    overwrite = args.ow
+
+    # Fetch list of URLs
+    print("Getting server URLs...", end="")
+    title, list_of_hrefs = get_title_and_chapter_links(driver, url)
+    print(" Done! (%d URLs)" % len(list_of_hrefs))
+
+    # Series folder
     series_folder = os.path.join(output_folder, title)
 
+    print("Preparing output folder: %s" % series_folder)
     # Create folder for the series, if it doesn't exist
     if not os.path.exists(series_folder):
         os.makedirs(series_folder)
@@ -216,7 +239,7 @@ def process(driver):
     # Iterate over the list_of_hrefs for the requested chapters
     for href in required_list:
         # Download a chapter
-        download_pages_of_one_chapter(driver, href)
+        download_pages_of_one_chapter(driver, href, delay)
 
     print("%d chapters downloaded successfully" % (high_index - low_index + 1))
     driver.quit()
@@ -231,8 +254,8 @@ def process(driver):
             dirs.sort()
             for single_dir in dirs:
                 pdfMaker.create_pdf(imageDirectory=single_dir,
-                                    bool_page0=args.pagezero,
-                                    overwriteExisting=args.ow)
+                                    bool_page0=chapter_page,
+                                    overwriteExisting=overwrite)
 
 
     if args.pdfseries:
