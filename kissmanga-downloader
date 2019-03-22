@@ -102,18 +102,17 @@ def download_pages_of_one_chapter(driver, url_to_chapter, delay=0):
     select.select_by_value('1')
 
     list_of_page_img = driver.find_elements_by_xpath('//div[@id="divImage"]/p/img')
+
+    # Get all chapter image locations
     img_urls = []
     for page_img in list_of_page_img:
         img_urls.append(page_img.get_attribute("src"))
 
+    # Find out chapter name
     chapter_name = url_to_chapter[url_to_chapter.rfind('/') + 1 : url_to_chapter.rfind('?')]
 
     # Unify format by parsing number out of chapter_name
     chapter_folder_name = "Chapter-" + re.findall('\d+', chapter_name)[0]
-    
-    
-
-    # print("Chapter name is " + chapter_name)
 
     # Create folder for chapter , if it not exist
     if not os.path.exists(chapter_folder_name):
@@ -121,11 +120,11 @@ def download_pages_of_one_chapter(driver, url_to_chapter, delay=0):
 
     print("Chapter "+ chapter_name + " -> " + chapter_folder_name + os.path.sep)
     
-    page_no = 1
+    page_num = 1
     for img_url in img_urls:
-    
-        page_no_correct = str(page_no).zfill(3)
-        filepath = os.path.join(chapter_folder_name, page_no_correct + ".jpg")
+        
+        page_num_pad = str(page_num).zfill(3)
+        filepath = os.path.join(chapter_folder_name, page_num_pad + ".jpg")
 
         # Current folder
         pwd = os.path.dirname(os.path.realpath(__file__))
@@ -133,9 +132,9 @@ def download_pages_of_one_chapter(driver, url_to_chapter, delay=0):
         fullfilename = os.path.join(pwd, filepath)
         
         if os.path.exists(fullfilename):
-            print(" " + page_no_correct + "(exists)", end="")
+            print(" " + page_num_pad + "(exists)", end="")
         else:
-            print(" " + page_no_correct, end="")
+            print(" " + page_num_pad, end="")
             try:
                 req = urllib.request.Request(img_url, headers={'User-Agent' : "Magic Browser"})
                 con = urllib.request.urlopen(req)
@@ -148,7 +147,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, delay=0):
                 print("(ERROR)", end="")
             
         sys.stdout.flush()
-        page_no += 1
+        page_num += 1
 
     print()
     print()
