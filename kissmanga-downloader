@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, time, sys, re
+import os, time, sys, re, inspect
 import pdfMaker
 import argparse
 import urllib.request
@@ -49,8 +49,13 @@ def init_driver():
     options = webdriver.ChromeOptions()
     options.add_argument('headless')
     options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/53")
+    
+    chrome_init = inspect.getfullargspec(webdriver.Chrome)
 
-    driver = webdriver.Chrome(chrome_options=options)
+    if 'options' in chrome_init.args:
+        driver = webdriver.Chrome(options=options)
+    else:
+        driver = webdriver.Chrome(chrome_options=options)
 
     return driver
 
@@ -174,8 +179,8 @@ def process(driver):
     parser.add_argument('-i', '--ini', required=True, type=int, help="Initial chapter number to download, in [1..n]")
     parser.add_argument('-e', '--end', required=True, type=int, help="Final chapter number to download, included")
     parser.add_argument('--pdf', required=False, action='store_true', help="Generate a PDF file for each chapter")
-    parser.add_argument('--pdfseries', required=False, action='store_true', help="Generate a huge PDF file with all chapters")
-    parser.add_argument('--chapter_page', required=False, action='store_true', help="Create title page for each chapter")
+    parser.add_argument('--pdf_series', required=False, action='store_true', help="Generate a huge PDF file with all chapters")
+    parser.add_argument('--chapter_page', required=False, action='store_true', help="Render a chapter page and put it in front of the PDDF of each chapter")
     parser.add_argument('--delay', required=False, type=float, help="Add a delay (in seconds) between page downloads to avoid overloading the server")
     parser.add_argument('--ow', required=False, action='store_true', help="Overwrite existing PDF files")
 
@@ -198,7 +203,13 @@ def process(driver):
     # Chapter page
     chapter_page = args.chapter_page
 
-    # PDF overwrite
+    # Create chapter PDFs?
+    pdf = args.pdf
+
+    # Create series PDF?
+    pdf_series = args.pdf_series
+
+    # Overwrite PDF files if they exist
     overwrite = args.ow
 
     # Fetch list of URLs
@@ -245,7 +256,7 @@ def process(driver):
 
     print("Starting creatinon of PDF files: %d to %d\n" % (low_index, high_index))
 
-    if args.pdf:
+    if pdf:
         # Active directory is inside the series folder:
         # Create the PDF, from the chapters inside
         mypath = os.getcwd()
@@ -257,7 +268,7 @@ def process(driver):
                                     overwriteExisting=overwrite)
 
 
-    if args.pdfseries:
+    if pdf_series:
         # Current folder has all the .pdf of the chapter folders
         pdfMaker.merge_pdfs(os.getcwd())
 

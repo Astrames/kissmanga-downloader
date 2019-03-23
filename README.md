@@ -17,14 +17,15 @@ Download chromedriver from [here](https://sites.google.com/a/chromium.org/chrome
 
 ### Linux
 
-Get chromedriver from your distro repository. For example:
+Get chromium or chromedriver from your distro repository. For example:
 
 ```bash
 $  # Ubuntu&co
 $  apt install chromium-chromedriver
-$  # Arch&co
-$  yay -S chromedriver
+$  # Arch&co - On arch, chromedriver is provided by chromium
+$  pacman -S chromium
 ```
+At the end of the day, whatever distro you use make sure `chromedriver` is in your `$PATH`.
 
 ### macOS
 
@@ -37,7 +38,7 @@ Here is the output of the `kissmanga-download -h`:
 
 ```
 usage: kissmanga-downloader [-h] [-o OUTPUT] -u URL -i INI -e END [--pdf]
-                            [--pdfseries] [--chapter_page] [--delay DELAY]
+                            [--pdf_series] [--chapter_page] [--delay DELAY]
                             [--ow]
 
 Batch-download chapters and series from Kissmanga
@@ -55,17 +56,18 @@ optional arguments:
   -i INI, --ini INI     Initial chapter number to download, in [1..n]
   -e END, --end END     Final chapter number to download, included
   --pdf                 Generate a PDF file for each chapter
-  --pdfseries           Generate a huge PDF file with all chapters
-  --chapter_page        Create title page for each chapter
+  --pdf_series          Generate a huge PDF file with all chapters
+  --chapter_page        Render a chapter page and put it in front of the PDDF
+                        of each chapter
   --delay DELAY         Add a delay (in seconds) between page downloads to
                         avoid overloading the server
   --ow                  Overwrite existing PDF files
 ```
 
-For instance, to get the first 100 chapters of Dragon Ball, generating only chapter PDFs and adding a title page to each chapter and putting the results in `/output/folder/path`:
+For instance, to get the first 100 chapters of Dragon Ball, generating only chapter PDFs and adding a title page to each chapter, with `/output/folder/path` as the output folder:
 
 ```bash
-$  kissmanga-downloader -u Dragon-Ball -o /output/folder/path -i 1 -e 100 --pdf --pagezero --ow
+$  kissmanga-downloader -u Dragon-Ball -o /output/folder/path -i 1 -e 100 --pdf --chapter_page --ow
 ```
 
 ## Features
