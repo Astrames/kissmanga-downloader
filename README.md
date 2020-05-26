@@ -3,7 +3,7 @@
 Python script to batch-download images from [Kissmanga](https://kissmanga.com) and optionally convert them to PDF.
 Forked from [Astrames/kissmanga-downloader](https://github.com/Astrames/kissmanga-downloader) and improved upon.
 
-## Dependecies
+## Dependencies
 
 You need Python 3.6+. Then, install the dependencies:
 
@@ -34,10 +34,18 @@ No idea, just get and install chromedriver by whatever means you can.
 
 ## Usage
 
-Here is the output of the `kissmanga-download -h`:
+To use the script, you have to run the following command:
+
+`python kissmanga-download.py`
+
+and then pass the applicable arguments.
+
+Linux/Mac users: The script has a shebang, so you may run it as `./kissmanga-downloader`
+
+Here is the output of the `python kissmanga-download.py -h`:
 
 ```
-usage: kissmanga-downloader [-h] [-o OUTPUT] -u URL -i INI -e END [--pdf]
+usage: kissmanga-downloader.py [-h] [-o OUTPUT] -u URL -i INI -e END [--pdf]
                             [--pdf_series] [--chapter_page] [--delay DELAY]
                             [--ow]
 
@@ -66,9 +74,10 @@ optional arguments:
 
 For instance, to get the first 100 chapters of Dragon Ball, generating only chapter PDFs and adding a title page to each chapter, with `/output/folder/path` as the output folder:
 
-```bash
-$  kissmanga-downloader -u Dragon-Ball -o /output/folder/path -i 1 -e 100 --pdf --chapter_page --ow
 ```
+python kissmanga-downloader.py -u Dragon-Ball -o /output/folder/path -i 1 -e 100 --pdf --chapter_page --ow
+```
+
 
 ## Features
 
