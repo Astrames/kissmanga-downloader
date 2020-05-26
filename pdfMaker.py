@@ -6,12 +6,9 @@ import PIL
 from PIL import ImageDraw
 from PyPDF2 import PdfFileReader, PdfFileWriter
 
-
-
 def get_width_height(imagePath):
 	im = PIL.Image.open(imagePath)
 	return im.width, im.height
-
 
 def get_list_image_paths(imageDirectory):
 	"""
@@ -21,6 +18,7 @@ def get_list_image_paths(imageDirectory):
 
 	list_full_names = []
 	for root, dirs, files in os.walk(mypath):
+		files.sort()
 		for single_file in files:
 			if ".jpg" in single_file:
 				full_path = join(root, single_file)
@@ -88,24 +86,22 @@ def create_pdf(imageDirectory, bool_page0, overwriteExisting=False, outputPDFNam
 	Creates a single PDF from a folder full of images.
 	"""
 	if outputPDFName is None:
-		namePDF = str(imageDirectory) + ".pdf"
+            namePDF = str(imageDirectory) + ".pdf"
 	else:
-		namePDF = outputPDFName
+	    namePDF = outputPDFName
 
 	# to prevent unnecessary overwrites
 	if os.path.exists(namePDF):
-		print(os.path.basename(namePDF), " already exists!")
-		if overwriteExisting is False:			
-			return
-		else:
-			print("Over writing",os.path.basename(namePDF),"...")
+            print(os.path.basename(namePDF) + ":", "exists", end="")
+            if overwriteExisting is False:
+                print()
+                return
+            else:
+                print(" -> overwriting")
 	else:
-		print("Creating ", os.path.basename(namePDF))
-
-	# c = canvas.Canvas(namePDF) #, page0_size)
+            print(os.path.basename(namePDF) + ": does not exist -> creating")
 
 	c = create_canvas(imageDirectory, namePDF, bool_page0)
-
 
 	for page_path in get_list_image_paths(imageDirectory):
 		w, h = get_width_height(page_path)
