@@ -1,6 +1,6 @@
 # kissmanga-downloader
 
-Python script to batch-download images from [Kissmanga](https://kissmanga.com) and optionally convert them to PDF.
+Python script to batch-download images from [Kissmanga](https://kissmanga.in) and optionally convert them to PDF or CBZ.
 Forked from [Astrames/kissmanga-downloader](https://github.com/Astrames/kissmanga-downloader) and improved upon.
 
 ## Dependencies
@@ -22,6 +22,8 @@ Get chromium or chromedriver from your distro repository. For example:
 ```bash
 $  # Ubuntu&co
 $  apt install chromium-chromedriver
+$  # Debian
+$  apt install chromium-driver
 $  # Arch&co - On arch, chromedriver is provided by chromium
 $  pacman -S chromium
 ```
@@ -36,7 +38,7 @@ No idea, just get and install chromedriver by whatever means you can.
 
 To use the script, you have to run the following command:
 
-`python kissmanga-download.py`
+`./kissmanga-download.py`
 
 and then pass the applicable arguments.
 
@@ -46,8 +48,8 @@ Here is the output of the `python kissmanga-download.py -h`:
 
 ```
 usage: kissmanga-downloader.py [-h] [-o OUTPUT] -u URL -i INI -e END [--pdf]
-                            [--pdf_series] [--chapter_page] [--delay DELAY]
-                            [--ow]
+                               [--cbz] [--delete_jpg] [--pdf_series]
+                               [--chapter_page] [--delay DELAY] [--ow]
 
 Batch-download chapters and series from Kissmanga
 
@@ -64,6 +66,8 @@ optional arguments:
   -i INI, --ini INI     Initial chapter number to download, in [1..n]
   -e END, --end END     Final chapter number to download, included
   --pdf                 Generate a PDF file for each chapter
+  --cbz                 Generate a CBZ file for each chapter
+  --delete_jpg          Delete jpg files after cbz creation
   --pdf_series          Generate a huge PDF file with all chapters
   --chapter_page        Render a chapter page and put it in front of the PDDF
                         of each chapter
@@ -83,9 +87,6 @@ python kissmanga-downloader.py -u Dragon-Ball -o /output/folder/path -i 1 -e 100
 
 *  Download all images/pages of a chapter and tidily organise them into folders with sane names.
 *  Optionally create PDF files for each chapter and a PDF for the entire series, for convenience.
-
-## Future Features
-
-* Archiving the chapters into individual `.zip`,`.cbr` or `.cbz` files, depending on the user.
-* More websites.
+*  Checks for a cbz/pdf file, and skips download of entire chapter if found.
+*  Delete jpg files when finished creating a cbz
 
