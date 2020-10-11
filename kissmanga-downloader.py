@@ -137,13 +137,15 @@ def get_title_and_chapter_links(driver, url_to_series):
     return title_text, list_of_href, xml_root
 
 
-def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot, delay=0):
+def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
+                                  series_folder, delay=0):
     """
     Goes through the chapter and downloads each page it encounters
     """
 
     # Going to first page
     driver.get(url_to_chapter)
+    os.chdir(series_folder)
 
     try:
         drop_down_list = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CLASS_NAME,"reading-style-select")))
@@ -197,10 +199,8 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot, delay=0):
         page_num_pad = str(page_num).zfill(3)
         filepath = os.path.join(chapter_folder_name, page_num_pad + ".jpg")
 
-        # Current folder
-        pwd = os.path.dirname(os.path.realpath(__file__))
         # Creating full file name
-        fullfilename = os.path.join(pwd, filepath)
+        fullfilename = os.path.join(series_folder, filepath)
 
         if os.path.exists(fullfilename):
             print(" " + page_num_pad + "(exists)", end="")
@@ -213,9 +213,10 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot, delay=0):
                     d.write(con.read())
                 if delay > 0:
                     time.sleep(delay)
-            except:
+            except Exception as e:
                 # Skip, not available
                 print("(ERROR)", end="")
+                print(e)
 
         sys.stdout.flush()
         page_num += 1
@@ -355,7 +356,8 @@ def process(driver):
     # Iterate over the list_of_hrefs for the requested chapters
     for href in required_list:
         # Download a chapter
-        ret = download_pages_of_one_chapter(driver, href, xmlroot, delay)
+        ret = download_pages_of_one_chapter(driver, href, xmlroot,
+                                            series_folder, delay)
         if ret:
             goodchap = goodchap + 1
 
