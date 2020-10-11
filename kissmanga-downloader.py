@@ -17,6 +17,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import NoSuchElementException
 # from selenium.webdriver.support.ui import Select
 
 
@@ -81,14 +82,14 @@ def gather_xml_info(driver, title_text):
         author = driver.find_element_by_xpath("//div[contains(@class, 'author-content')]/a")
         xml_author = ET.SubElement(xml_root, 'Writer')
         xml_author.text = author.get_attribute('innerHTML')
-    except ET.NoSuchElementException:
+    except NoSuchElementException:
         pass
 
     try:
         artist = driver.find_element_by_xpath("//div[contains(@class, 'artist-content')]/a")
         xml_artist = ET.SubElement(xml_root, 'Penciller')
         xml_artist.text = artist.get_attribute('innerHTML')
-    except ET.NoSuchElementException:
+    except NoSuchElementException:
         pass
 
     try:
@@ -99,7 +100,7 @@ def gather_xml_info(driver, title_text):
         genre_str = genre_str[1:]
         xml_genre = ET.SubElement(xml_root, 'Genre')
         xml_genre.text = genre_str
-    except ET.NoSuchElementException:
+    except NoSuchElementException:
         pass
 
     return xml_root
@@ -146,7 +147,8 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot, delay=0):
         drop_down_list = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CLASS_NAME,"reading-style-select")))
     except TimeoutException:
         print("Exception Occured:    TimeoutException")
-        sys.exit("Couldn't load chapter!")
+        print("Couldn't load chapter: " + url_to_chapter)
+        return
 
     # select = Select(drop_down_list)
 
