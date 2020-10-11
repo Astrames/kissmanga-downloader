@@ -153,23 +153,23 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot, delay=0):
     # # Selecting the 'All Pages' option
     # select.select_by_value('List style')
 
+    # Find out chapter name
+    chapter_name = url_to_chapter.rsplit('/')[-2]
+
+    # Unify format by parsing number out of chapter_name
+    chapter_number = (re.findall('\d+.?\d*', chapter_name)[0]).replace('-', '.')
+    chapter_folder_name = "Chapter-" + chapter_number
+
+    if os.path.exists(chapter_folder_name + '.pdf') or os.path.exists(chapter_folder_name + '.cbz'):
+        print("Skipping " + chapter_folder_name + " due to cbz/pdf.")
+        return True
+
     list_of_page_img = driver.find_elements_by_xpath('//img[@class="wp-manga-chapter-img"]')
 
     # Get all chapter image locations
     img_urls = []
     for page_img in list_of_page_img:
         img_urls.append(page_img.get_attribute("src"))
-
-    # Find out chapter name
-    chapter_name = url_to_chapter.rsplit('/')[-2]
-
-    # Unify format by parsing number out of chapter_name
-    chapter_number = re.findall('\d+', chapter_name)[0]
-    chapter_folder_name = "Chapter-" + chapter_number
-
-    if os.path.exists(chapter_folder_name + '.pdf') or os.path.exists(chapter_folder_name + '.cbz'):
-        print("Skipping " + chapter_folder_name + " due to cbz/pdf.")
-        return True
 
     # Create folder for chapter , if it not exist
     if not os.path.exists(chapter_folder_name):
