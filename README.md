@@ -89,4 +89,4 @@ python kissmanga-downloader.py -u Dragon-Ball -o /output/folder/path -i 1 -e 100
 *  Optionally create PDF files for each chapter and a PDF for the entire series, for convenience.
 *  Checks for a cbz/pdf file, and skips download of entire chapter if found.
 *  Delete jpg files when finished creating a cbz
-
+*  Creates a ComicInfo.xml file when creating a cbz

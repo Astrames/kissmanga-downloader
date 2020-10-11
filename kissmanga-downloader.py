@@ -9,6 +9,7 @@ import pdfMaker
 import argparse
 import urllib.request
 import zipfile
+import xml.etree.ElementTree as ET
 
 from selenium import webdriver
 
@@ -66,6 +67,44 @@ def init_driver():
     return driver
 
 
+def gather_xml_info(driver, title_text):
+    """
+    Dig through the first page and gather data for a Comicinfo.xml file
+    """
+    xml_root = ET.Element('ComicInfo',
+                          {'xmlns:xsi':'http://www.w3.org/2001/XMLSchema-instance',
+                           'xmlns:xsd':'http://www.w3.org/2001/XMLSchema'})
+
+    xml_series = ET.SubElement(xml_root, 'Series')
+    xml_series.text = title_text
+    try:
+        author = driver.find_element_by_xpath("//div[contains(@class, 'author-content')]/a")
+        xml_author = ET.SubElement(xml_root, 'Writer')
+        xml_author.text = author.get_attribute('innerHTML')
+    except ET.NoSuchElementException:
+        pass
+
+    try:
+        artist = driver.find_element_by_xpath("//div[contains(@class, 'artist-content')]/a")
+        xml_artist = ET.SubElement(xml_root, 'Penciller')
+        xml_artist.text = artist.get_attribute('innerHTML')
+    except ET.NoSuchElementException:
+        pass
+
+    try:
+        genre = driver.find_elements_by_xpath("//div[contains(@class, 'genres-content')]/a")
+        genre_str = ""
+        for elem in genre:
+            genre_str = genre_str + ',' + elem.get_attribute('innerHTML')
+        genre_str = genre_str[1:]
+        xml_genre = ET.SubElement(xml_root, 'Genre')
+        xml_genre.text = genre_str
+    except ET.NoSuchElementException:
+        pass
+
+    return xml_root
+
+
 def get_title_and_chapter_links(driver, url_to_series):
     """
     Supply the main page of the manga and get the title, and list of URLs
@@ -80,6 +119,8 @@ def get_title_and_chapter_links(driver, url_to_series):
         print("Exception Occured:    TimeoutException")
         sys.exit("Couldn't get title!")
 
+    xml_root = gather_xml_info(driver, title_text)
+
     list_of_a_tags = driver.find_elements_by_xpath("//li[contains(@class, 'wp-manga-chapter ')]/a")
 
     # Reversing to get ascending list,
@@ -90,10 +131,10 @@ def get_title_and_chapter_links(driver, url_to_series):
     for a_tag in list_of_a_tags:
         list_of_href.append(a_tag.get_attribute('href'))
 
-    return title_text, list_of_href
+    return title_text, list_of_href, xml_root
 
 
-def download_pages_of_one_chapter(driver, url_to_chapter, delay=0):
+def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot, delay=0):
     """
     Goes through the chapter and downloads each page it encounters
     """
@@ -123,7 +164,8 @@ def download_pages_of_one_chapter(driver, url_to_chapter, delay=0):
     chapter_name = url_to_chapter.rsplit('/')[-2]
 
     # Unify format by parsing number out of chapter_name
-    chapter_folder_name = "Chapter-" + re.findall('\d+', chapter_name)[0]
+    chapter_number = re.findall('\d+', chapter_name)[0]
+    chapter_folder_name = "Chapter-" + chapter_number
 
     if os.path.exists(chapter_folder_name + '.pdf') or os.path.exists(chapter_folder_name + '.cbz'):
         print("Skipping " + chapter_folder_name + " due to cbz/pdf.")
@@ -133,7 +175,17 @@ def download_pages_of_one_chapter(driver, url_to_chapter, delay=0):
     if not os.path.exists(chapter_folder_name):
         os.makedirs(chapter_folder_name)
 
-    print("Chapter "+ chapter_name + " -> " + chapter_folder_name + os.path.sep)
+    print("Chapter " + chapter_name + " -> " + chapter_folder_name + os.path.sep)
+
+    xml_title = ET.SubElement(xmlroot, 'Title')
+    xml_title.text = 'Chapter ' + chapter_number
+    xml_number = ET.SubElement(xmlroot, 'Number')
+    xml_number.text = chapter_number
+    fp = os.path.join(chapter_folder_name + os.path.sep + 'ComicInfo.xml')
+    xf = open(fp, "wb")
+    tree = ET.ElementTree(xmlroot)
+    tree.write(xf)
+    xf.close()
 
     page_num = 1
     for img_url in img_urls:
@@ -249,7 +301,7 @@ def process(driver):
     print("Getting server URLs", end="")
     sys.stdout.flush()
     while (nrof_urls == 0 and tries > 1):
-        title, list_of_hrefs = get_title_and_chapter_links(driver, url)
+        title, list_of_hrefs, xmlroot = get_title_and_chapter_links(driver, url)
         nrof_urls = len(list_of_hrefs)
         tries = tries - 1
         print(".", end="")
@@ -293,7 +345,7 @@ def process(driver):
     # Iterate over the list_of_hrefs for the requested chapters
     for href in required_list:
         # Download a chapter
-        download_pages_of_one_chapter(driver, href, delay)
+        download_pages_of_one_chapter(driver, href, xmlroot, delay)
 
     print("%d chapters downloaded successfully" % (high_index - low_index + 1))
     driver.quit()
@@ -312,7 +364,10 @@ def process(driver):
                 for rootpath, dirnames, filenames in os.walk(single_dir):
                     for filename in filenames:
                         abs_filename = os.path.join(rootpath, filename)
-                        zfile.write(abs_filename)
+                        if filename == 'ComicInfo.xml':
+                            zfile.write(abs_filename, arcname=filename)
+                        else:
+                            zfile.write(abs_filename)
                         if args.delete_jpg:
                             os.remove(abs_filename)
                 zfile.close()
