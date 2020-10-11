@@ -61,6 +61,8 @@ def init_driver():
     chrome_init = inspect.getfullargspec(webdriver.Chrome)
 
     if 'options' in chrome_init.args:
+        prefs = {"profile.managed_default_content_settings.images": 2}
+        options.add_experimental_option("prefs", prefs)
         driver = webdriver.Chrome(options=options)
     else:
         driver = webdriver.Chrome(chrome_options=options)
@@ -148,7 +150,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot, delay=0):
     except TimeoutException:
         print("Exception Occured:    TimeoutException")
         print("Couldn't load chapter: " + url_to_chapter)
-        return
+        return False
 
     # select = Select(drop_down_list)
 
@@ -221,7 +223,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot, delay=0):
     print()
     print()
 
-    pass
+    return True
 
 
 def dequote(s):
@@ -252,7 +254,7 @@ def process(driver):
                         help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.com/Manga/Dragon-Ball' use'Dragon-Ball)")
     parser.add_argument('-i', '--ini', required=True, type=int,
                         help="Initial chapter number to download, in [1..n]")
-    parser.add_argument('-e', '--end', required=True, type=int,
+    parser.add_argument('-e', '--end', required=False, type=int, default=-1,
                         help="Final chapter number to download, included")
     parser.add_argument('--pdf', required=False, action='store_true',
                         help="Generate a PDF file for each chapter")
@@ -336,20 +338,28 @@ def process(driver):
         print("--ini must be larger than 0: " + low_index)
         exit(0)
 
-    if high_index < low_index:
+    if high_index < low_index and high_index != -1:
         print("--end must be greater or equal than --ini: [%d <= %d]" % (low_index, high_index))
         exit(0)
 
-    required_list = list_of_hrefs[low_index - 1: high_index]
+    if high_index == -1:
+        required_list = list_of_hrefs[low_index - 1:]
+    else:
+        required_list = list_of_hrefs[low_index - 1: high_index]
+
+    nrofchap = len(required_list)
+    goodchap = 0
 
     print("Starting chapter download: %d to %d\n" % (low_index, high_index))
 
     # Iterate over the list_of_hrefs for the requested chapters
     for href in required_list:
         # Download a chapter
-        download_pages_of_one_chapter(driver, href, xmlroot, delay)
+        ret = download_pages_of_one_chapter(driver, href, xmlroot, delay)
+        if ret:
+            goodchap = goodchap + 1
 
-    print("%d chapters downloaded successfully" % (high_index - low_index + 1))
+    print("%d of %d chapters downloaded successfully" % (goodchap, nrofchap))
     driver.quit()
 
     print("Starting creation of PDF/CBZ files: %d to %d\n" % (low_index, high_index))
