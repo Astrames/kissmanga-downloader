@@ -188,12 +188,13 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
     xml_title.text = 'Chapter ' + chapter_number
     xml_number = ET.SubElement(xmlroot, 'Number')
     xml_number.text = chapter_number
-    fp = os.path.join(chapter_folder_name + os.path.sep + 'ComicInfo.xml')
+    xml_fp = os.path.join(chapter_folder_name + os.path.sep + 'ComicInfo.xml')
     tree = ET.ElementTree(xmlroot)
-    with open(fp, 'wb') as xml_file:
+    with open(xml_fp, 'wb') as xml_file:
         tree.write(xml_file)
 
     page_num = 1
+    good_downloads = 0
     for img_url in img_urls:
 
         page_num_pad = str(page_num).zfill(3)
@@ -209,17 +210,34 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
             try:
                 req = urllib.request.Request(img_url, headers={'User-Agent' : "Magic Browser"})
                 con = urllib.request.urlopen(req)
-                with open(fullfilename, mode="wb") as d:
-                    d.write(con.read())
+                img_good = True
+                try:
+                    img_data = con.read(600).decode('utf-8')
+                    img_good = False
+                except UnicodeError:
+                    pass
+                if img_good:
+                    with open(fullfilename, mode="wb") as d:
+                        d.write(con.read())
+                        good_downloads = good_downloads + 1
+                else:
+                    raise Exception('Not an Image')
                 if delay > 0:
                     time.sleep(delay)
             except Exception as e:
                 # Skip, not available
                 print("(ERROR)", end="")
-                print(e)
+                print(e, end=" ")
 
         sys.stdout.flush()
         page_num += 1
+
+    if good_downloads == 0:
+        os.remove(xml_fp)
+        os.rmdir(chapter_folder_name)
+        print()
+        print('Unable to download any images')
+        return False
 
     print()
     print()
