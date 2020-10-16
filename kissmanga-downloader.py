@@ -18,7 +18,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
-# from selenium.webdriver.support.ui import Select
 
 
 """
@@ -157,11 +156,6 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
         print("Couldn't load chapter: " + url_to_chapter)
         return False
 
-    # select = Select(drop_down_list)
-
-    # # Selecting the 'All Pages' option
-    # select.select_by_value('List style')
-
     # Find out chapter name
     chapter_name = (url_to_chapter.rsplit('/')[-2])
     if chapter_name.endswith('.'):
@@ -195,10 +189,9 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
     xml_number = ET.SubElement(xmlroot, 'Number')
     xml_number.text = chapter_number
     fp = os.path.join(chapter_folder_name + os.path.sep + 'ComicInfo.xml')
-    xf = open(fp, "wb")
     tree = ET.ElementTree(xmlroot)
-    tree.write(xf)
-    xf.close()
+    with open(fp, 'wb') as xml_file:
+        tree.write(xml_file)
 
     page_num = 1
     for img_url in img_urls:
@@ -312,7 +305,7 @@ def process(driver):
     tries = 5
     print("Getting server URLs", end="")
     sys.stdout.flush()
-    while (nrof_urls == 0 and tries > 1):
+    while nrof_urls == 0 and tries > 0:
         title, list_of_hrefs, xmlroot = get_title_and_chapter_links(driver, url)
         nrof_urls = len(list_of_hrefs)
         tries = tries - 1
@@ -322,7 +315,7 @@ def process(driver):
 
     print(" Done! (%d URLs)" % len(list_of_hrefs))
     if nrof_urls == 0:
-        print("Can't connect")
+        print("Can't connect, or no chapters found")
         exit(1)
 
     # Series folder
@@ -371,7 +364,8 @@ def process(driver):
     print("%d of %d chapters downloaded successfully" % (goodchap, nrofchap))
     driver.quit()
 
-    print("Starting creation of PDF/CBZ files: %d to %d\n" % (low_index, high_index))
+    if cbz or pdf:
+        print("Starting creation of PDF/CBZ files: %d to %d\n" % (low_index, high_index))
 
     if cbz:
         mypath = os.getcwd()
@@ -379,21 +373,21 @@ def process(driver):
             dirs.sort()
             for single_dir in dirs:
                 cbz_filename = make_filename(single_dir, 'cbz')
-                zfile = zipfile.ZipFile(cbz_filename, "w")
-                print("Creating: " + cbz_filename)
+                with zipfile.ZipFile(cbz_filename, "w") as zfile:
+                    print("Creating: " + cbz_filename)
 
-                for rootpath, dirnames, filenames in os.walk(single_dir):
-                    for filename in filenames:
-                        abs_filename = os.path.join(rootpath, filename)
-                        if filename == 'ComicInfo.xml':
-                            zfile.write(abs_filename, arcname=filename)
-                        else:
-                            zfile.write(abs_filename)
-                        if args.delete_jpg:
-                            os.remove(abs_filename)
-                zfile.close()
-                if args.delete_jpg:
-                    os.rmdir(single_dir)
+                    for rootpath, dirnames, filenames in os.walk(single_dir):
+                        for filename in filenames:
+                            abs_filename = os.path.join(rootpath, filename)
+                            if filename == 'ComicInfo.xml':
+                                zfile.write(abs_filename, arcname=filename)
+                            else:
+                                zfile.write(abs_filename)
+                            if args.delete_jpg:
+                                os.remove(abs_filename)
+                    zfile.close()
+                    if args.delete_jpg:
+                        os.rmdir(single_dir)
 
     if pdf:
         # Active directory is inside the series folder:

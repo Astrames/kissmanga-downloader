@@ -38,11 +38,11 @@ No idea, just get and install chromedriver by whatever means you can.
 
 To use the script, you have to run the following command:
 
-`./kissmanga-download.py`
+`python kissmanga-download.py`
 
 and then pass the applicable arguments.
 
-Linux/Mac users: The script has a shebang, so you may run it as `./kissmanga-downloader`
+Linux/Mac users: The script has a shebang, so you may run it as `./kissmanga-downloader.py`
 
 Here is the output of the `python kissmanga-download.py -h`:
 
@@ -89,4 +89,5 @@ python kissmanga-downloader.py -u Dragon-Ball -o /output/folder/path -i 1 -e 100
 *  Optionally create PDF files for each chapter and a PDF for the entire series, for convenience.
 *  Checks for a cbz/pdf file, and skips download of entire chapter if found.
 *  Delete jpg files when finished creating a cbz
-*  Creates a ComicInfo.xml file when creating a cbz
+*  Creates a ComicInfo.xml file when creating a cbz (used by certain CBZ readers to automatically provide metadata to the reader, such as author/genre/name/etc)
+
