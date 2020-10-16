@@ -205,6 +205,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
 
         if os.path.exists(fullfilename):
             print(" " + page_num_pad + "(exists)", end="")
+            good_downloads = good_downloads + 1
         else:
             print(" " + page_num_pad, end="")
             try:
