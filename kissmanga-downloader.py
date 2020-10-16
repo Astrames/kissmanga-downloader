@@ -117,7 +117,7 @@ def get_title_and_chapter_links(driver, url_to_series):
 
     try:
         title_tag = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CLASS_NAME,"post-title")))
-        title_text = title_tag.text
+        title_text = title_tag.text.encode("ascii", errors="ignore").decode()
     except TimeoutException:
         print("Exception Occured:    TimeoutException")
         sys.exit("Couldn't get title!")
@@ -160,11 +160,15 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
     # select.select_by_value('List style')
 
     # Find out chapter name
-    chapter_name = url_to_chapter.rsplit('/')[-2]
+    chapter_name = (url_to_chapter.rsplit('/')[-2])
+    if chapter_name.endswith('.'):
+        chapter_name = chapter_name[:-1]
 
     # Unify format by parsing number out of chapter_name
     chapter_number = (re.findall('\d+.?\d*', chapter_name)[0]).replace('-', '.')
     chapter_folder_name = "Chapter-" + chapter_number
+    if chapter_folder_name.endswith('.'):
+        chapter_folder_name = chapter_folder_name[:-1]
 
     if os.path.exists(chapter_folder_name + '.pdf') or os.path.exists(chapter_folder_name + '.cbz'):
         print("Skipping " + chapter_folder_name + " due to cbz/pdf.")
