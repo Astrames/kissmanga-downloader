@@ -122,6 +122,9 @@ def get_title_and_chapter_links(driver, url_to_series):
         print("Exception Occured:    TimeoutException")
         sys.exit("Couldn't get title!")
 
+    if '\n' in title_text:
+        title_text = title_text[(title_text.index('\n')+1):]
+
     xml_root = gather_xml_info(driver, title_text)
 
     list_of_a_tags = driver.find_elements_by_xpath("//li[contains(@class, 'wp-manga-chapter ')]/a")
