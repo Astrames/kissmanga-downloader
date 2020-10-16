@@ -212,14 +212,15 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
                 req = urllib.request.Request(img_url, headers={'User-Agent' : "Magic Browser"})
                 con = urllib.request.urlopen(req)
                 img_good = True
+                img_data = con.read()
                 try:
-                    img_data = con.read(600).decode('utf-8')
+                    img_data.decode('utf-8')
                     img_good = False
                 except UnicodeError:
                     pass
                 if img_good:
                     with open(fullfilename, mode="wb") as d:
-                        d.write(con.read())
+                        d.write(img_data)
                         good_downloads = good_downloads + 1
                 else:
                     raise Exception('Not an Image')
