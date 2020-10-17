@@ -159,7 +159,12 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
     """
 
     # Going to first page
-    driver.get(url_to_chapter)
+    try:
+        driver.get(url_to_chapter)
+    except TimeoutException:
+        print("Couldn't load chapter: " + url_to_chapter)
+        return -1
+
     os.chdir(series_folder)
 
     try:
@@ -291,8 +296,8 @@ def process(driver):
     parser.add_argument('-u', '--url', required=True, type=str,
                         help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.in/kissmanga/dungeon-meshi' use 'dungeon-meshi')")
 
-    parser_group = parser.add_mutually_exclusive_group(required=True)
-    parser_group.add_argument('-i', '--ini', type=int,
+    parser_group = parser.add_mutually_exclusive_group(required=False)
+    parser_group.add_argument('-i', '--ini', type=int, default=1,
                               help="Initial chapter number to download, in [1..n]")
     parser_group.add_argument('-r', '--reverse', action='store_true',
                               default=False,
