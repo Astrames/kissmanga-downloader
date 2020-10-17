@@ -66,6 +66,7 @@ def init_driver():
     else:
         driver = webdriver.Chrome(chrome_options=options)
 
+    driver.set_page_load_timeout(90)
     return driver
 
 
@@ -158,6 +159,21 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
     Returns -1 if error, 0 if normal, 1 if already exists.
     """
 
+    # Find out chapter name
+    chapter_name = (url_to_chapter.rsplit('/')[-2])
+    if chapter_name.endswith('.'):
+        chapter_name = chapter_name[:-1]
+
+    # Unify format by parsing number out of chapter_name
+    chapter_number = (re.findall(r'\d+.?\d*', chapter_name)[0]).replace('-', '.')
+    chapter_folder_name = "Chapter-" + chapter_number
+    if chapter_folder_name.endswith('.'):
+        chapter_folder_name = chapter_folder_name[:-1]
+
+    if os.path.exists(chapter_folder_name + '.pdf') or os.path.exists(chapter_folder_name + '.cbz'):
+        print("Skipping " + chapter_folder_name + " due to cbz/pdf.")
+        return 1
+
     # Going to first page
     try:
         driver.get(url_to_chapter)
@@ -173,21 +189,6 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
         print("Exception Occured:    TimeoutException")
         print("Couldn't load chapter: " + url_to_chapter)
         return -1
-
-    # Find out chapter name
-    chapter_name = (url_to_chapter.rsplit('/')[-2])
-    if chapter_name.endswith('.'):
-        chapter_name = chapter_name[:-1]
-
-    # Unify format by parsing number out of chapter_name
-    chapter_number = (re.findall(r'\d+.?\d*', chapter_name)[0]).replace('-', '.')
-    chapter_folder_name = "Chapter-" + chapter_number
-    if chapter_folder_name.endswith('.'):
-        chapter_folder_name = chapter_folder_name[:-1]
-
-    if os.path.exists(chapter_folder_name + '.pdf') or os.path.exists(chapter_folder_name + '.cbz'):
-        print("Skipping " + chapter_folder_name + " due to cbz/pdf.")
-        return 1
 
     list_of_page_img = driver.find_elements_by_xpath('//img[@class="wp-manga-chapter-img"]')
 
@@ -286,67 +287,46 @@ def make_filename(dirname, ext):
     return "%s.%s" % (dirname, ext)
 
 
-def process(driver):
-    base_url = "https://kissmanga.in/kissmanga/"
+def create_cbz_pdf(args, series_folder):
+    if args.cbz:
+        for root, dirs, files in os.walk(series_folder):
+            dirs.sort()
+            for single_dir in dirs:
+                cbz_filename = make_filename(single_dir, 'cbz')
+                with zipfile.ZipFile(cbz_filename, "w") as zfile:
+                    print("Creating: " + cbz_filename)
 
-    # Parse arguments
-    parser = argparse.ArgumentParser(description="Batch-download chapters and series from Kissmanga")
-    parser.add_argument('-o', '--output', type=str,
-                        help="Output folder path where the series folder will be created. Defaults to the current path from which this script is run")
-    parser.add_argument('-u', '--url', required=True, type=str,
-                        help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.in/kissmanga/dungeon-meshi' use 'dungeon-meshi')")
+                    for rootpath, dirnames, filenames in os.walk(single_dir):
+                        for filename in filenames:
+                            abs_filename = os.path.join(rootpath, filename)
+                            if filename == 'ComicInfo.xml':
+                                zfile.write(abs_filename, arcname=filename)
+                            else:
+                                zfile.write(abs_filename)
+                            if args.delete_jpg:
+                                os.remove(abs_filename)
+                    zfile.close()
+                    if args.delete_jpg:
+                        os.rmdir(single_dir)
 
-    parser_group = parser.add_mutually_exclusive_group(required=False)
-    parser_group.add_argument('-i', '--ini', type=int, default=1,
-                              help="Initial chapter number to download, in [1..n]")
-    parser_group.add_argument('-r', '--reverse', action='store_true',
-                              default=False,
-                              help="Download in reverse order, stop when existing downloads are found.")
+    if args.pdf:
+        # Active directory is inside the series folder:
+        # Create the PDF, from the chapters inside
+        for root, dirs, files in os.walk(series_folder):
+            dirs.sort()
+            for single_dir in dirs:
+                pdfMaker.create_pdf(imageDirectory=single_dir,
+                                    bool_page0=args.chapter_page,
+                                    overwriteExisting=args.overwrite)
 
-    parser.add_argument('-e', '--end', required=False, type=int, default=-1,
-                        help="Final chapter number to download, included")
-    parser.add_argument('--pdf', required=False, action='store_true',
-                        help="Generate a PDF file for each chapter")
-    parser.add_argument('--cbz', required=False, action='store_true',
-                        help="Generate a CBZ file for each chapter")
-    parser.add_argument('--delete_jpg', required=False, action='store_true',
-                        help="Delete jpg files after cbz creation")
-    parser.add_argument('--pdf_series', required=False, action='store_true',
-                        help="Generate a huge PDF file with all chapters")
-    parser.add_argument('--chapter_page', required=False, action='store_true',
-                        help="Render a chapter page and put it in front of the PDF of each chapter")
-    parser.add_argument('--delay', required=False, type=float,
-                        help="Add a delay (in seconds) between page downloads to avoid overloading the server")
-    parser.add_argument('--ow', required=False, action='store_true',
-                        help="Overwrite existing PDF files")
+    if args.pdf_series:
+        pdfMaker.merge_pdfs(series_folder)
 
-    args = parser.parse_args()
 
-    print("Initialising kissmanga-downloader")
-
-    # Get main page of the series
-    url = args.url if 'kissmanga.in' in dequote(args.url) else base_url + dequote(args.url)
-
-    # Output folder
-    output_folder = os.getcwd() if args.output is None else args.output
-
-    # Delay between page downloads
-    delay = 0 if args.delay is None or args.delay < 0 else args.delay
-    if delay > 0:
-        print("Using a delay of %.1f seconds" % delay)
-
-    # Chapter page
-    chapter_page = args.chapter_page
-
-    # Create chapter PDFs?
-    pdf = args.pdf
-    cbz = args.cbz
-
-    # Create series PDF?
-    pdf_series = args.pdf_series
-
-    # Overwrite PDF files if they exist
-    overwrite = args.ow
+def process_one_url(driver, url, output_folder, args):
+    """
+    Fully process one URL, return number of chapters downloaded.
+    """
 
     # Fetch list of URLs
     nrof_urls = 0
@@ -364,7 +344,7 @@ def process(driver):
     print(" Done! (%d URLs)" % len(list_of_hrefs))
     if nrof_urls == 0:
         print("Can't connect, or no chapters found")
-        exit(1)
+        return 0
 
     # Series folder
     series_folder = os.path.join(output_folder, title)
@@ -373,9 +353,6 @@ def process(driver):
     # Create folder for the series, if it doesn't exist
     if not os.path.exists(series_folder):
         os.makedirs(series_folder)
-
-    # Starting folder
-    start_folder = os.getcwd()
 
     # Navigate inside the series folder
     os.chdir(series_folder)
@@ -412,7 +389,7 @@ def process(driver):
     for href in required_list:
         # Download a chapter
         ret = download_pages_of_one_chapter(driver, href, xmlroot,
-                                            series_folder, delay)
+                                            series_folder, args.delay)
         if ret == 0:
             goodchap = goodchap + 1
         if args.reverse and ret == 1:
@@ -420,51 +397,72 @@ def process(driver):
             break
 
     print("%d of %d chapters downloaded successfully" % (goodchap, nrofchap))
-    driver.quit()
 
-    if cbz or pdf:
+    if args.cbz or args.pdf:
         print("Starting creation of PDF/CBZ files")
+        create_cbz_pdf(args, series_folder)
 
-    if cbz:
-        mypath = os.getcwd()
-        for root, dirs, files in os.walk(mypath):
-            dirs.sort()
-            for single_dir in dirs:
-                cbz_filename = make_filename(single_dir, 'cbz')
-                with zipfile.ZipFile(cbz_filename, "w") as zfile:
-                    print("Creating: " + cbz_filename)
+    return goodchap
 
-                    for rootpath, dirnames, filenames in os.walk(single_dir):
-                        for filename in filenames:
-                            abs_filename = os.path.join(rootpath, filename)
-                            if filename == 'ComicInfo.xml':
-                                zfile.write(abs_filename, arcname=filename)
-                            else:
-                                zfile.write(abs_filename)
-                            if args.delete_jpg:
-                                os.remove(abs_filename)
-                    zfile.close()
-                    if args.delete_jpg:
-                        os.rmdir(single_dir)
 
-    if pdf:
-        # Active directory is inside the series folder:
-        # Create the PDF, from the chapters inside
-        mypath = os.getcwd()
-        for root, dirs, files in os.walk(mypath):
-            dirs.sort()
-            for single_dir in dirs:
-                pdfMaker.create_pdf(imageDirectory=single_dir,
-                                    bool_page0=chapter_page,
-                                    overwriteExisting=overwrite)
+def process(driver):
+    base_url = "https://kissmanga.in/kissmanga/"
 
-    if pdf_series:
-        # Current folder has all the .pdf of the chapter folders
-        pdfMaker.merge_pdfs(os.getcwd())
+    # Parse arguments
+    parser = argparse.ArgumentParser(description="Batch-download chapters and series from Kissmanga")
+    parser.add_argument('-o', '--output', type=str,
+                        help="Output folder path where the series folder will be created. Defaults to the current path from which this script is run")
+    parser.add_argument('-u', '--url', required=True, type=str,
+                        help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.in/kissmanga/dungeon-meshi' use 'dungeon-meshi')")
 
-    # Go back to start_folder
-    os.chdir(start_folder)
+    parser_group = parser.add_mutually_exclusive_group(required=False)
+    parser_group.add_argument('-i', '--ini', type=int, default=1,
+                              help="Initial chapter number to download, in [1..n]")
+    parser_group.add_argument('-r', '--reverse', action='store_true',
+                              default=False,
+                              help="Download in reverse order, stop when existing downloads are found.")
 
+    parser.add_argument('-e', '--end', required=False, type=int, default=-1,
+                        help="Final chapter number to download, included")
+    parser.add_argument('--pdf', required=False, action='store_true',
+                        help="Generate a PDF file for each chapter")
+    parser.add_argument('--cbz', required=False, action='store_true',
+                        help="Generate a CBZ file for each chapter")
+    parser.add_argument('--delete_jpg', required=False, action='store_true',
+                        help="Delete jpg files after cbz creation")
+    parser.add_argument('--pdf_series', required=False, action='store_true',
+                        help="Generate a huge PDF file with all chapters")
+    parser.add_argument('--chapter_page', required=False, action='store_true',
+                        help="Render a chapter page and put it in front of the PDF of each chapter")
+    parser.add_argument('--delay', required=False, type=float, default=0.0,
+                        help="Add a delay (in seconds) between page downloads to avoid overloading the server")
+    parser.add_argument('--ow', required=False, action='store_true',
+                        help="Overwrite existing PDF files")
+
+    args = parser.parse_args()
+
+    print("Initialising kissmanga-downloader")
+
+    # Get main page of the series
+    url = args.url if 'kissmanga.in' in dequote(args.url) else base_url + dequote(args.url)
+
+    # Output folder
+    output_folder = os.getcwd() if args.output is None else args.output
+    try:
+        os.chdir(output_folder)
+    except Exception as e:
+        print("Unable to change directory to " + output_folder)
+        print(e)
+        sys.exit(1)
+
+    # Delay between page downloads
+    if args.delay > 0:
+        print("Using a delay of %.1f seconds" % args.delay)
+
+    process_one_url(driver, url, output_folder, args)
+    os.chdir(output_folder)
+
+    driver.quit()
     print("Done!")
 
 
