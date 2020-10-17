@@ -104,10 +104,21 @@ def gather_xml_info(driver, title_text):
     except NoSuchElementException:
         pass
 
+    try:
+        summary = driver.find_elements_by_xpath("//div[contains(@class, 'summary__content')]/p")
+        summary_str = ""
+        for elem in summary:
+            summary_str = summary_str + '\n' + elem.get_attribute('innerHTML')
+        summary_str = summary_str[1:]
+        xml_summary = ET.SubElement(xml_root, 'Summary')
+        xml_summary.text = summary_str
+    except NoSuchElementException:
+        pass
+
     return xml_root
 
 
-def get_title_and_chapter_links(driver, url_to_series):
+def get_title_and_chapter_links(driver, url_to_series, reverse=False):
     """
     Supply the main page of the manga and get the title, and list of URLs
     of the chapters available
@@ -130,7 +141,8 @@ def get_title_and_chapter_links(driver, url_to_series):
 
     # Reversing to get ascending list,
     # since it is originally in descending order
-    list_of_a_tags = list_of_a_tags[::-1]
+    if not reverse:
+        list_of_a_tags = list_of_a_tags[::-1]
 
     list_of_href = []
     for a_tag in list_of_a_tags:
@@ -143,6 +155,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
                                   series_folder, delay=0):
     """
     Goes through the chapter and downloads each page it encounters
+    Returns -1 if error, 0 if normal, 1 if already exists.
     """
 
     # Going to first page
@@ -154,7 +167,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
     except TimeoutException:
         print("Exception Occured:    TimeoutException")
         print("Couldn't load chapter: " + url_to_chapter)
-        return False
+        return -1
 
     # Find out chapter name
     chapter_name = (url_to_chapter.rsplit('/')[-2])
@@ -169,7 +182,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
 
     if os.path.exists(chapter_folder_name + '.pdf') or os.path.exists(chapter_folder_name + '.cbz'):
         print("Skipping " + chapter_folder_name + " due to cbz/pdf.")
-        return True
+        return 1
 
     list_of_page_img = driver.find_elements_by_xpath('//img[@class="wp-manga-chapter-img"]')
 
@@ -194,7 +207,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
         tree.write(xml_file)
 
     page_num = 1
-    good_downloads = 0
+    good_downloads = actual_downloads = 0
     for img_url in img_urls:
 
         page_num_pad = str(page_num).zfill(3)
@@ -222,6 +235,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
                     with open(fullfilename, mode="wb") as d:
                         d.write(img_data)
                         good_downloads = good_downloads + 1
+                        actual_downloads = actual_downloads + 1
                 else:
                     raise Exception('Not an Image')
                 if delay > 0:
@@ -239,12 +253,15 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
         os.rmdir(chapter_folder_name)
         print()
         print('Unable to download any images')
-        return False
+        return -1
 
     print()
     print()
 
-    return True
+    if actual_downloads == 0:
+        return 1
+
+    return 0
 
 
 def dequote(s):
@@ -273,8 +290,14 @@ def process(driver):
                         help="Output folder path where the series folder will be created. Defaults to the current path from which this script is run")
     parser.add_argument('-u', '--url', required=True, type=str,
                         help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.com/Manga/Dragon-Ball' use'Dragon-Ball)")
-    parser.add_argument('-i', '--ini', required=True, type=int,
-                        help="Initial chapter number to download, in [1..n]")
+
+    parser_group = parser.add_mutually_exclusive_group(required=True)
+    parser_group.add_argument('-i', '--ini', type=int,
+                              help="Initial chapter number to download, in [1..n]")
+    parser_group.add_argument('-r', '--reverse', action='store_true',
+                              default=False,
+                              help="Download in reverse order, stop when existing downloads are found.")
+
     parser.add_argument('-e', '--end', required=False, type=int, default=-1,
                         help="Final chapter number to download, included")
     parser.add_argument('--pdf', required=False, action='store_true',
@@ -326,7 +349,7 @@ def process(driver):
     print("Getting server URLs", end="")
     sys.stdout.flush()
     while nrof_urls == 0 and tries > 0:
-        title, list_of_hrefs, xmlroot = get_title_and_chapter_links(driver, url)
+        title, list_of_hrefs, xmlroot = get_title_and_chapter_links(driver, url, args.reverse)
         nrof_urls = len(list_of_hrefs)
         tries = tries - 1
         print(".", end="")
@@ -352,40 +375,50 @@ def process(driver):
     # Navigate inside the series folder
     os.chdir(series_folder)
 
-    low_index = args.ini
-    high_index = args.end
-
-    if low_index < 1:
-        print("--ini must be larger than 0: " + low_index)
-        exit(0)
-
-    if high_index < low_index and high_index != -1:
-        print("--end must be greater or equal than --ini: [%d <= %d]" % (low_index, high_index))
-        exit(0)
-
-    if high_index == -1:
-        required_list = list_of_hrefs[low_index - 1:]
+    if args.reverse:
+        required_list = list_of_hrefs
     else:
-        required_list = list_of_hrefs[low_index - 1: high_index]
+        low_index = args.ini
+        high_index = args.end
+
+        if low_index < 1:
+            print("--ini must be larger than 0: " + low_index)
+            exit(0)
+
+        if high_index < low_index and high_index != -1:
+            print("--end must be greater or equal than --ini: [%d <= %d]" % (low_index, high_index))
+            exit(0)
+
+        if high_index == -1:
+            required_list = list_of_hrefs[low_index - 1:]
+        else:
+            required_list = list_of_hrefs[low_index - 1: high_index]
 
     nrofchap = len(required_list)
     goodchap = 0
 
-    print("Starting chapter download: %d to %d\n" % (low_index, high_index))
+    if args.reverse:
+        print("Starting chapter download in reverse order")
+        print()
+    else:
+        print("Starting chapter download: %d to %d\n" % (low_index, high_index))
 
     # Iterate over the list_of_hrefs for the requested chapters
     for href in required_list:
         # Download a chapter
         ret = download_pages_of_one_chapter(driver, href, xmlroot,
                                             series_folder, delay)
-        if ret:
+        if ret == 0:
             goodchap = goodchap + 1
+        if args.reverse and ret == 1:
+            # we hit a manga we have already.
+            break
 
     print("%d of %d chapters downloaded successfully" % (goodchap, nrofchap))
     driver.quit()
 
     if cbz or pdf:
-        print("Starting creation of PDF/CBZ files: %d to %d\n" % (low_index, high_index))
+        print("Starting creation of PDF/CBZ files")
 
     if cbz:
         mypath = os.getcwd()
