@@ -74,8 +74,8 @@ def gather_xml_info(driver, title_text):
     Dig through the first page and gather data for a Comicinfo.xml file
     """
     xml_root = ET.Element('ComicInfo',
-                          {'xmlns:xsi':'http://www.w3.org/2001/XMLSchema-instance',
-                           'xmlns:xsd':'http://www.w3.org/2001/XMLSchema'})
+                          {'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+                           'xmlns:xsd': 'http://www.w3.org/2001/XMLSchema'})
 
     xml_series = ET.SubElement(xml_root, 'Series')
     xml_series.text = title_text
@@ -133,7 +133,7 @@ def get_title_and_chapter_links(driver, url_to_series, reverse=False):
         sys.exit("Couldn't get title!")
 
     if '\n' in title_text:
-        title_text = title_text[(title_text.index('\n')+1):]
+        title_text = title_text[(title_text.index('\n') + 1):]
 
     xml_root = gather_xml_info(driver, title_text)
 
@@ -163,7 +163,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
     os.chdir(series_folder)
 
     try:
-        drop_down_list = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CLASS_NAME,"reading-style-select")))
+        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CLASS_NAME, "reading-style-select")))
     except TimeoutException:
         print("Exception Occured:    TimeoutException")
         print("Couldn't load chapter: " + url_to_chapter)
@@ -175,7 +175,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
         chapter_name = chapter_name[:-1]
 
     # Unify format by parsing number out of chapter_name
-    chapter_number = (re.findall('\d+.?\d*', chapter_name)[0]).replace('-', '.')
+    chapter_number = (re.findall(r'\d+.?\d*', chapter_name)[0]).replace('-', '.')
     chapter_folder_name = "Chapter-" + chapter_number
     if chapter_folder_name.endswith('.'):
         chapter_folder_name = chapter_folder_name[:-1]
@@ -222,7 +222,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
         else:
             print(" " + page_num_pad, end="")
             try:
-                req = urllib.request.Request(img_url, headers={'User-Agent' : "Magic Browser"})
+                req = urllib.request.Request(img_url, headers={'User-Agent': "Magic Browser"})
                 con = urllib.request.urlopen(req)
                 img_good = True
                 img_data = con.read()
@@ -289,7 +289,7 @@ def process(driver):
     parser.add_argument('-o', '--output', type=str,
                         help="Output folder path where the series folder will be created. Defaults to the current path from which this script is run")
     parser.add_argument('-u', '--url', required=True, type=str,
-                        help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.com/Manga/Dragon-Ball' use'Dragon-Ball)")
+                        help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.in/kissmanga/dungeon-meshi' use 'dungeon-meshi')")
 
     parser_group = parser.add_mutually_exclusive_group(required=True)
     parser_group.add_argument('-i', '--ini', type=int,
@@ -309,7 +309,7 @@ def process(driver):
     parser.add_argument('--pdf_series', required=False, action='store_true',
                         help="Generate a huge PDF file with all chapters")
     parser.add_argument('--chapter_page', required=False, action='store_true',
-                        help="Render a chapter page and put it in front of the PDDF of each chapter")
+                        help="Render a chapter page and put it in front of the PDF of each chapter")
     parser.add_argument('--delay', required=False, type=float,
                         help="Add a delay (in seconds) between page downloads to avoid overloading the server")
     parser.add_argument('--ow', required=False, action='store_true',

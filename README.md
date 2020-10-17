@@ -47,8 +47,8 @@ Linux/Mac users: The script has a shebang, so you may run it as `./kissmanga-dow
 Here is the output of the `python kissmanga-download.py -h`:
 
 ```
-usage: kissmanga-downloader.py [-h] [-o OUTPUT] -u URL -i INI -e END [--pdf]
-                               [--cbz] [--delete_jpg] [--pdf_series]
+usage: kissmanga-downloader.py [-h] [-o OUTPUT] -u URL (-i INI | -r) [-e END]
+                               [--pdf] [--cbz] [--delete_jpg] [--pdf_series]
                                [--chapter_page] [--delay DELAY] [--ow]
 
 Batch-download chapters and series from Kissmanga
@@ -61,9 +61,11 @@ optional arguments:
                         script is run
   -u URL, --url URL     Name of the series, no need to include the base
                         kissmanga URL, so for
-                        'https://kissmanga.com/Manga/Dragon-Ball' use'Dragon-
-                        Ball)
+                        'https://kissmanga.in/kissmanga/dungeon-meshi' use
+                        'dungeon-meshi')
   -i INI, --ini INI     Initial chapter number to download, in [1..n]
+  -r, --reverse         Download in reverse order, stop when existing
+                        downloads are found.
   -e END, --end END     Final chapter number to download, included
   --pdf                 Generate a PDF file for each chapter
   --cbz                 Generate a CBZ file for each chapter
@@ -76,10 +78,16 @@ optional arguments:
   --ow                  Overwrite existing PDF files
 ```
 
-For instance, to get the first 100 chapters of Dragon Ball, generating only chapter PDFs and adding a title page to each chapter, with `/output/folder/path` as the output folder:
+For instance, to get the first 50 chapters of Dungeon Meshi, generating only chapter PDFs and adding a title page to each chapter, with `/output/folder/path` as the output folder:
 
 ```
-python kissmanga-downloader.py -u Dragon-Ball -o /output/folder/path -i 1 -e 100 --pdf --chapter_page --ow
+python kissmanga-downloader.py -u dungeon-meshi -o /output/folder/path -i 1 -e 50 --pdf --chapter_page --ow
+```
+
+If you have already downloaded a manga, and want to grab the lastest updates for it in cbz format, and clean up the img files when done:
+
+```
+python kissmanga-downloader.py -u dungeon-meshi -o /output/folder/path -r --cbz --delete_jpg
 ```
 
 
