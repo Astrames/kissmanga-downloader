@@ -47,9 +47,11 @@ Linux/Mac users: The script has a shebang, so you may run it as `./kissmanga-dow
 Here is the output of the `python kissmanga-download.py -h`:
 
 ```
-usage: kissmanga-downloader.py [-h] [-o OUTPUT] -u URL (-i INI | -r) [-e END]
-                               [--pdf] [--cbz] [--delete_jpg] [--pdf_series]
-                               [--chapter_page] [--delay DELAY] [--ow]
+usage: kissmanga-downloader.py [-h] [-o OUTPUT]
+                               (-u URL | --batch_file BATCH_FILE)
+                               [-i INI | -r] [-e END] [--pdf] [--cbz]
+                               [--delete_jpg] [--pdf_series] [--chapter_page]
+                               [--delay DELAY] [--ow]
 
 Batch-download chapters and series from Kissmanga
 
@@ -63,6 +65,8 @@ optional arguments:
                         kissmanga URL, so for
                         'https://kissmanga.in/kissmanga/dungeon-meshi' use
                         'dungeon-meshi')
+  --batch_file BATCH_FILE
+                        Process a batch file of URL's
   -i INI, --ini INI     Initial chapter number to download, in [1..n]
   -r, --reverse         Download in reverse order, stop when existing
                         downloads are found.
@@ -71,7 +75,7 @@ optional arguments:
   --cbz                 Generate a CBZ file for each chapter
   --delete_jpg          Delete jpg files after cbz creation
   --pdf_series          Generate a huge PDF file with all chapters
-  --chapter_page        Render a chapter page and put it in front of the PDDF
+  --chapter_page        Render a chapter page and put it in front of the PDF
                         of each chapter
   --delay DELAY         Add a delay (in seconds) between page downloads to
                         avoid overloading the server
@@ -90,6 +94,14 @@ If you have already downloaded a manga, and want to grab the lastest updates for
 python kissmanga-downloader.py -u dungeon-meshi -o /output/folder/path -r --cbz --delete_jpg
 ```
 
+A batch file is simply a file containing a list of URL's to download one at a time.
+If a line starts with a '#', it will be ignored, and blank lines will be ignored.
+
+For example, to download the first two chapters of every manga listed in /tmp/batch.txt, create cbz files of them, and clean up all jpgs when done:
+
+'''
+python kissmanga-downloader.py --batch_file /tmp/batch.txt --cbz --delete_jpg -o /output/folder/path -e 2
+'''
 
 ## Features
 
@@ -98,4 +110,5 @@ python kissmanga-downloader.py -u dungeon-meshi -o /output/folder/path -r --cbz 
 *  Checks for a cbz/pdf file, and skips download of entire chapter if found.
 *  Delete jpg files when finished creating a cbz
 *  Creates a ComicInfo.xml file when creating a cbz (used by certain CBZ readers to automatically provide metadata to the reader, such as author/genre/name/etc)
-
+*  Process a batch file of urls to download
+*  Download chapters in reverse order for use in a nightly download to grab the latest chapters

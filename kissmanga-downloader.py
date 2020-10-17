@@ -412,8 +412,12 @@ def process(driver):
     parser = argparse.ArgumentParser(description="Batch-download chapters and series from Kissmanga")
     parser.add_argument('-o', '--output', type=str,
                         help="Output folder path where the series folder will be created. Defaults to the current path from which this script is run")
-    parser.add_argument('-u', '--url', required=True, type=str,
-                        help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.in/kissmanga/dungeon-meshi' use 'dungeon-meshi')")
+
+    parser_url_group = parser.add_mutually_exclusive_group(required=True)
+    parser_url_group.add_argument('-u', '--url', type=str,
+                                  help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.in/kissmanga/dungeon-meshi' use 'dungeon-meshi')")
+    parser_url_group.add_argument('--batch_file', type=str,
+                                  help="Process a batch file of URL's")
 
     parser_group = parser.add_mutually_exclusive_group(required=False)
     parser_group.add_argument('-i', '--ini', type=int, default=1,
@@ -443,9 +447,6 @@ def process(driver):
 
     print("Initialising kissmanga-downloader")
 
-    # Get main page of the series
-    url = args.url if 'kissmanga.in' in dequote(args.url) else base_url + dequote(args.url)
-
     # Output folder
     output_folder = os.getcwd() if args.output is None else args.output
     try:
@@ -459,8 +460,28 @@ def process(driver):
     if args.delay > 0:
         print("Using a delay of %.1f seconds" % args.delay)
 
-    process_one_url(driver, url, output_folder, args)
-    os.chdir(output_folder)
+    if args.batch_file is not None:
+        print("Processing batch file: " + args.batch_file)
+        try:
+            with open(args.batch_file) as bfp:
+                for cnt, line in enumerate(bfp):
+                    if line[0] == '#' or len(line) < 3:
+                        continue
+                    print("Found manga {}".format(line.rstrip()))
+                    if 'kissmanga.in' in dequote(line.rstrip()):
+                        url = line.rstrip()
+                    else:
+                        url = base_url + dequote(line.rstrip())
+                    process_one_url(driver, url, output_folder, args)
+                    os.chdir(output_folder)
+        except Exception as e:
+            print(e)
+            sys.exit(1)
+    else:
+        # Get main page of the series
+        url = args.url if 'kissmanga.in' in dequote(args.url) else base_url + dequote(args.url)
+        process_one_url(driver, url, output_folder, args)
+        os.chdir(output_folder)
 
     driver.quit()
     print("Done!")
