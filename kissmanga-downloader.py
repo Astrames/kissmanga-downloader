@@ -66,7 +66,7 @@ def init_driver():
     else:
         driver = webdriver.Chrome(chrome_options=options)
 
-    driver.set_page_load_timeout(90)
+    driver.set_page_load_timeout(150)
     return driver
 
 
