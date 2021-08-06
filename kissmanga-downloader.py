@@ -131,7 +131,7 @@ def get_title_and_chapter_links(driver, url_to_series, reverse=False):
         title_text = title_tag.text.encode("ascii", errors="ignore").decode()
     except TimeoutException:
         print("Exception Occured:    TimeoutException")
-        sys.exit("Couldn't get title!")
+        return None, [], None
 
     if '\n' in title_text:
         title_text = title_text[(title_text.index('\n') + 1):]
@@ -337,6 +337,9 @@ def process_one_url(driver, url, output_folder, args):
         title, list_of_hrefs, xmlroot = get_title_and_chapter_links(driver, url, args.reverse)
         nrof_urls = len(list_of_hrefs)
         tries = tries - 1
+        # abort if we got a timeout error
+        if title is None or xmlroot is None:
+            tries = -1
         print(".", end="")
         sys.stdout.flush()
         time.sleep(2)
