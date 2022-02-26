@@ -2,3 +2,4 @@ selenium
 reportlab
 PyPDF2
 pillow
+fake_useragent

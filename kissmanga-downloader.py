@@ -19,6 +19,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
 
+from fake_useragent import UserAgent
+import random
 
 """
 sample url =
@@ -55,18 +57,30 @@ def init_driver():
     # Setting the user agent to a human browser
     options = webdriver.ChromeOptions()
     options.add_argument('headless')
-    options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/53")
+    options.add_argument('enable-javascript')
+
+    ua = UserAgent()
+    userAgent = ua.random
+    print(userAgent)
+    #options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/53")
+    options.add_argument(f"user-agent={userAgent}")
+    options.add_argument("start-maximized")
+    options.add_argument("disable-extensions")
+    options.add_argument('disable-blink-features=AutomationControlled')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
 
     chrome_init = inspect.getfullargspec(webdriver.Chrome)
 
     if 'options' in chrome_init.args:
         prefs = {"profile.managed_default_content_settings.images": 2}
-        options.add_experimental_option("prefs", prefs)
+        #options.add_experimental_option("prefs", prefs)
         driver = webdriver.Chrome(options=options)
     else:
         driver = webdriver.Chrome(chrome_options=options)
 
     driver.set_page_load_timeout(150)
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     return driver
 
 
@@ -81,21 +95,21 @@ def gather_xml_info(driver, title_text):
     xml_series = ET.SubElement(xml_root, 'Series')
     xml_series.text = title_text
     try:
-        author = driver.find_element_by_xpath("//div[contains(@class, 'author-content')]/a")
+        author = driver.find_element(By.XPATH, "//div[contains(@class, 'author-content')]/a")
         xml_author = ET.SubElement(xml_root, 'Writer')
         xml_author.text = author.get_attribute('innerHTML')
     except NoSuchElementException:
         pass
 
     try:
-        artist = driver.find_element_by_xpath("//div[contains(@class, 'artist-content')]/a")
+        artist = driver.find_element(By.XPATH, "//div[contains(@class, 'artist-content')]/a")
         xml_artist = ET.SubElement(xml_root, 'Penciller')
         xml_artist.text = artist.get_attribute('innerHTML')
     except NoSuchElementException:
         pass
 
     try:
-        genre = driver.find_elements_by_xpath("//div[contains(@class, 'genres-content')]/a")
+        genre = driver.find_elements(By.XPATH, "//div[contains(@class, 'genres-content')]/a")
         genre_str = ""
         for elem in genre:
             genre_str = genre_str + ',' + elem.get_attribute('innerHTML')
@@ -106,7 +120,7 @@ def gather_xml_info(driver, title_text):
         pass
 
     try:
-        summary = driver.find_elements_by_xpath("//div[contains(@class, 'summary__content')]/p")
+        summary = driver.find_elements(By.XPATH, "//div[contains(@class, 'summary__content')]/p")
         summary_str = ""
         for elem in summary:
             summary_str = summary_str + '\n' + elem.get_attribute('innerHTML')
@@ -124,22 +138,28 @@ def get_title_and_chapter_links(driver, url_to_series, reverse=False):
     Supply the main page of the manga and get the title, and list of URLs
     of the chapters available
     """
+    print("")
+    print("Calling " + url_to_series)
     driver.get(url_to_series)
 
     try:
-        title_tag = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CLASS_NAME,"post-title")))
-        title_text = title_tag.text.encode("ascii", errors="ignore").decode()
+        #title_tag = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CLASS_NAME,"post-title")))
+        title_tag = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH,"//*[@property='og:title']")))
+        title_text = title_tag.get_attribute("content").encode("ascii", errors="ignore").decode()
     except TimeoutException:
         print("Exception Occured:    TimeoutException")
+        # sys.exit("Couldn't get title!")
         return None, [], None
 
     if '\n' in title_text:
         title_text = title_text[(title_text.index('\n') + 1):]
 
+    title_text = re.sub(' - Kissmanga.*$', '', title_text)
+
     xml_root = gather_xml_info(driver, title_text)
 
-    list_of_a_tags = driver.find_elements_by_xpath("//li[contains(@class, 'wp-manga-chapter ')]/a")
-
+    list_of_a_tags = driver.find_elements(By.XPATH, "//li[contains(@class, 'wp-manga-chapter ')]/a")
+    
     # Reversing to get ascending list,
     # since it is originally in descending order
     if not reverse:
@@ -149,7 +169,9 @@ def get_title_and_chapter_links(driver, url_to_series, reverse=False):
     for a_tag in list_of_a_tags:
         list_of_href.append(a_tag.get_attribute('href'))
 
-    return title_text, list_of_href, xml_root
+    cookies = driver.get_cookies()
+
+    return title_text, list_of_href, xml_root, cookies
 
 
 def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
@@ -176,21 +198,27 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
 
     # Going to first page
     try:
+        print("Sleeping for up to " + str(3 * delay) + " seconds.")
+        time.sleep(random.uniform(delay, 3 * delay))
+        print("Loading chapter " + url_to_chapter)
         driver.get(url_to_chapter)
     except TimeoutException:
-        print("Couldn't load chapter: " + url_to_chapter)
+        print("Couldn't load chapter(first page): " + url_to_chapter)
         return -1
 
     os.chdir(series_folder)
 
     try:
-        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CLASS_NAME, "reading-style-select")))
+        print("Waiting on images for chapter " + url_to_chapter)
+#        WebDriverWait(driver, 25).until(EC.presence_of_element_located((By.XPATH, "//*[@class='selectpicker reading-style-select']")))
+        WebDriverWait(driver, 25).until(EC.presence_of_element_located((By.XPATH, '//img[@class="wp-manga-chapter-img"]')))
     except TimeoutException:
+        print(driver.page_source)
         print("Exception Occured:    TimeoutException")
-        print("Couldn't load chapter: " + url_to_chapter)
+        print("Couldn't load chapter(style-select): " + url_to_chapter)
         return -1
 
-    list_of_page_img = driver.find_elements_by_xpath('//img[@class="wp-manga-chapter-img"]')
+    list_of_page_img = driver.find_elements(By.XPATH, '//img[@class="wp-manga-chapter-img"]')
 
     # Get all chapter image locations
     img_urls = []
@@ -245,7 +273,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
                 else:
                     raise Exception('Not an Image')
                 if delay > 0:
-                    time.sleep(delay)
+                    time.sleep(random.uniform(delay, delay * 2))
             except Exception as e:
                 # Skip, not available
                 print("(ERROR)", end="")
@@ -334,12 +362,11 @@ def process_one_url(driver, url, output_folder, args):
     print("Getting server URLs", end="")
     sys.stdout.flush()
     while nrof_urls == 0 and tries > 0:
-        title, list_of_hrefs, xmlroot = get_title_and_chapter_links(driver, url, args.reverse)
+        title, list_of_hrefs, xmlroot, cookies = get_title_and_chapter_links(driver, url, args.reverse)
         nrof_urls = len(list_of_hrefs)
         tries = tries - 1
-        # abort if we got a timeout error
-        if title is None or xmlroot is None:
-            tries = -1
+        if title is None:
+          tries = -1
         print(".", end="")
         sys.stdout.flush()
         time.sleep(2)
@@ -348,6 +375,10 @@ def process_one_url(driver, url, output_folder, args):
     if nrof_urls == 0:
         print("Can't connect, or no chapters found")
         return 0
+
+    driver.delete_all_cookies()
+    for cook in cookies:
+        driver.add_cookie(cook)
 
     # Series folder
     series_folder = os.path.join(output_folder, title)
