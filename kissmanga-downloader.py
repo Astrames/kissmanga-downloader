@@ -19,6 +19,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
 
+from fake_useragent import UserAgent
+import random
 
 """
 sample url =
@@ -55,17 +57,30 @@ def init_driver():
     # Setting the user agent to a human browser
     options = webdriver.ChromeOptions()
     options.add_argument('headless')
-    options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/53")
+    options.add_argument('enable-javascript')
+
+    ua = UserAgent()
+    userAgent = ua.random
+    print(userAgent)
+    #options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/53")
+    options.add_argument(f"user-agent={userAgent}")
+    options.add_argument("start-maximized")
+    options.add_argument("disable-extensions")
+    options.add_argument('disable-blink-features=AutomationControlled')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
 
     chrome_init = inspect.getfullargspec(webdriver.Chrome)
 
     if 'options' in chrome_init.args:
         prefs = {"profile.managed_default_content_settings.images": 2}
-        options.add_experimental_option("prefs", prefs)
+        #options.add_experimental_option("prefs", prefs)
         driver = webdriver.Chrome(options=options)
     else:
         driver = webdriver.Chrome(chrome_options=options)
 
+    driver.set_page_load_timeout(150)
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     return driver
 
 
@@ -74,27 +89,27 @@ def gather_xml_info(driver, title_text):
     Dig through the first page and gather data for a Comicinfo.xml file
     """
     xml_root = ET.Element('ComicInfo',
-                          {'xmlns:xsi':'http://www.w3.org/2001/XMLSchema-instance',
-                           'xmlns:xsd':'http://www.w3.org/2001/XMLSchema'})
+                          {'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+                           'xmlns:xsd': 'http://www.w3.org/2001/XMLSchema'})
 
     xml_series = ET.SubElement(xml_root, 'Series')
     xml_series.text = title_text
     try:
-        author = driver.find_element_by_xpath("//div[contains(@class, 'author-content')]/a")
+        author = driver.find_element(By.XPATH, "//div[contains(@class, 'author-content')]/a")
         xml_author = ET.SubElement(xml_root, 'Writer')
         xml_author.text = author.get_attribute('innerHTML')
     except NoSuchElementException:
         pass
 
     try:
-        artist = driver.find_element_by_xpath("//div[contains(@class, 'artist-content')]/a")
+        artist = driver.find_element(By.XPATH, "//div[contains(@class, 'artist-content')]/a")
         xml_artist = ET.SubElement(xml_root, 'Penciller')
         xml_artist.text = artist.get_attribute('innerHTML')
     except NoSuchElementException:
         pass
 
     try:
-        genre = driver.find_elements_by_xpath("//div[contains(@class, 'genres-content')]/a")
+        genre = driver.find_elements(By.XPATH, "//div[contains(@class, 'genres-content')]/a")
         genre_str = ""
         for elem in genre:
             genre_str = genre_str + ',' + elem.get_attribute('innerHTML')
@@ -104,57 +119,67 @@ def gather_xml_info(driver, title_text):
     except NoSuchElementException:
         pass
 
+    try:
+        summary = driver.find_elements(By.XPATH, "//div[contains(@class, 'summary__content')]/p")
+        summary_str = ""
+        for elem in summary:
+            summary_str = summary_str + '\n' + elem.get_attribute('innerHTML')
+        summary_str = summary_str[1:]
+        xml_summary = ET.SubElement(xml_root, 'Summary')
+        xml_summary.text = summary_str
+    except NoSuchElementException:
+        pass
+
     return xml_root
 
 
-def get_title_and_chapter_links(driver, url_to_series):
+def get_title_and_chapter_links(driver, url_to_series, reverse=False):
     """
     Supply the main page of the manga and get the title, and list of URLs
     of the chapters available
     """
+    print("")
+    print("Calling " + url_to_series)
     driver.get(url_to_series)
 
     try:
-        title_tag = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CLASS_NAME,"post-title")))
-        title_text = title_tag.text.encode("ascii", errors="ignore").decode()
+        #title_tag = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CLASS_NAME,"post-title")))
+        title_tag = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH,"//*[@property='og:title']")))
+        title_text = title_tag.get_attribute("content").encode("ascii", errors="ignore").decode()
     except TimeoutException:
         print("Exception Occured:    TimeoutException")
-        sys.exit("Couldn't get title!")
+        # sys.exit("Couldn't get title!")
+        return None, [], None
 
     if '\n' in title_text:
-        title_text = title_text[(title_text.index('\n')+1):]
+        title_text = title_text[(title_text.index('\n') + 1):]
+
+    title_text = re.sub(' - Kissmanga.*$', '', title_text)
 
     xml_root = gather_xml_info(driver, title_text)
 
-    list_of_a_tags = driver.find_elements_by_xpath("//li[contains(@class, 'wp-manga-chapter ')]/a")
-
+    list_of_a_tags = driver.find_elements(By.XPATH, "//li[contains(@class, 'wp-manga-chapter ')]/a")
+    
     # Reversing to get ascending list,
     # since it is originally in descending order
-    list_of_a_tags = list_of_a_tags[::-1]
+    if not reverse:
+        list_of_a_tags = list_of_a_tags[::-1]
 
     list_of_href = []
     for a_tag in list_of_a_tags:
         list_of_href.append(a_tag.get_attribute('href'))
 
-    return title_text, list_of_href, xml_root
+    cookies = driver.get_cookies()
+
+    return title_text, list_of_href, xml_root, cookies
 
 
 def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
                                   series_folder, delay=0):
     """
     Goes through the chapter and downloads each page it encounters
+    Returns -1 if error, 0 if normal, 1 if already exists.
     """
-
-    # Going to first page
-    driver.get(url_to_chapter)
-    os.chdir(series_folder)
-
-    try:
-        drop_down_list = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CLASS_NAME,"reading-style-select")))
-    except TimeoutException:
-        print("Exception Occured:    TimeoutException")
-        print("Couldn't load chapter: " + url_to_chapter)
-        return False
 
     # Find out chapter name
     chapter_name = (url_to_chapter.rsplit('/')[-2])
@@ -162,16 +187,38 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
         chapter_name = chapter_name[:-1]
 
     # Unify format by parsing number out of chapter_name
-    chapter_number = (re.findall('\d+.?\d*', chapter_name)[0]).replace('-', '.')
+    chapter_number = (re.findall(r'\d+.?\d*', chapter_name)[0]).replace('-', '.')
     chapter_folder_name = "Chapter-" + chapter_number
     if chapter_folder_name.endswith('.'):
         chapter_folder_name = chapter_folder_name[:-1]
 
     if os.path.exists(chapter_folder_name + '.pdf') or os.path.exists(chapter_folder_name + '.cbz'):
         print("Skipping " + chapter_folder_name + " due to cbz/pdf.")
-        return True
+        return 1
 
-    list_of_page_img = driver.find_elements_by_xpath('//img[@class="wp-manga-chapter-img"]')
+    # Going to first page
+    try:
+        print("Sleeping for up to " + str(3 * delay) + " seconds.")
+        time.sleep(random.uniform(delay, 3 * delay))
+        print("Loading chapter " + url_to_chapter)
+        driver.get(url_to_chapter)
+    except TimeoutException:
+        print("Couldn't load chapter(first page): " + url_to_chapter)
+        return -1
+
+    os.chdir(series_folder)
+
+    try:
+        print("Waiting on images for chapter " + url_to_chapter)
+#        WebDriverWait(driver, 25).until(EC.presence_of_element_located((By.XPATH, "//*[@class='selectpicker reading-style-select']")))
+        WebDriverWait(driver, 25).until(EC.presence_of_element_located((By.XPATH, '//img[@class="wp-manga-chapter-img"]')))
+    except TimeoutException:
+        print(driver.page_source)
+        print("Exception Occured:    TimeoutException")
+        print("Couldn't load chapter(style-select): " + url_to_chapter)
+        return -1
+
+    list_of_page_img = driver.find_elements(By.XPATH, '//img[@class="wp-manga-chapter-img"]')
 
     # Get all chapter image locations
     img_urls = []
@@ -194,7 +241,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
         tree.write(xml_file)
 
     page_num = 1
-    good_downloads = 0
+    good_downloads = actual_downloads = 0
     for img_url in img_urls:
 
         page_num_pad = str(page_num).zfill(3)
@@ -209,7 +256,7 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
         else:
             print(" " + page_num_pad, end="")
             try:
-                req = urllib.request.Request(img_url, headers={'User-Agent' : "Magic Browser"})
+                req = urllib.request.Request(img_url, headers={'User-Agent': "Magic Browser"})
                 con = urllib.request.urlopen(req)
                 img_good = True
                 img_data = con.read()
@@ -222,10 +269,11 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
                     with open(fullfilename, mode="wb") as d:
                         d.write(img_data)
                         good_downloads = good_downloads + 1
+                        actual_downloads = actual_downloads + 1
                 else:
                     raise Exception('Not an Image')
                 if delay > 0:
-                    time.sleep(delay)
+                    time.sleep(random.uniform(delay, delay * 2))
             except Exception as e:
                 # Skip, not available
                 print("(ERROR)", end="")
@@ -239,12 +287,15 @@ def download_pages_of_one_chapter(driver, url_to_chapter, xmlroot,
         os.rmdir(chapter_folder_name)
         print()
         print('Unable to download any images')
-        return False
+        return -1
 
     print()
     print()
 
-    return True
+    if actual_downloads == 0:
+        return 1
+
+    return 0
 
 
 def dequote(s):
@@ -264,132 +315,9 @@ def make_filename(dirname, ext):
     return "%s.%s" % (dirname, ext)
 
 
-def process(driver):
-    base_url = "https://kissmanga.in/kissmanga/"
-
-    # Parse arguments
-    parser = argparse.ArgumentParser(description="Batch-download chapters and series from Kissmanga")
-    parser.add_argument('-o', '--output', type=str,
-                        help="Output folder path where the series folder will be created. Defaults to the current path from which this script is run")
-    parser.add_argument('-u', '--url', required=True, type=str,
-                        help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.com/Manga/Dragon-Ball' use'Dragon-Ball)")
-    parser.add_argument('-i', '--ini', required=True, type=int,
-                        help="Initial chapter number to download, in [1..n]")
-    parser.add_argument('-e', '--end', required=False, type=int, default=-1,
-                        help="Final chapter number to download, included")
-    parser.add_argument('--pdf', required=False, action='store_true',
-                        help="Generate a PDF file for each chapter")
-    parser.add_argument('--cbz', required=False, action='store_true',
-                        help="Generate a CBZ file for each chapter")
-    parser.add_argument('--delete_jpg', required=False, action='store_true',
-                        help="Delete jpg files after cbz creation")
-    parser.add_argument('--pdf_series', required=False, action='store_true',
-                        help="Generate a huge PDF file with all chapters")
-    parser.add_argument('--chapter_page', required=False, action='store_true',
-                        help="Render a chapter page and put it in front of the PDDF of each chapter")
-    parser.add_argument('--delay', required=False, type=float,
-                        help="Add a delay (in seconds) between page downloads to avoid overloading the server")
-    parser.add_argument('--ow', required=False, action='store_true',
-                        help="Overwrite existing PDF files")
-
-    args = parser.parse_args()
-
-    print("Initialising kissmanga-downloader")
-
-    # Get main page of the series
-    url = args.url if 'kissmanga.in' in dequote(args.url) else base_url + dequote(args.url)
-
-    # Output folder
-    output_folder = os.getcwd() if args.output is None else args.output
-
-    # Delay between page downloads
-    delay = 0 if args.delay is None or args.delay < 0 else args.delay
-    if delay > 0:
-        print("Using a delay of %.1f seconds" % delay)
-
-    # Chapter page
-    chapter_page = args.chapter_page
-
-    # Create chapter PDFs?
-    pdf = args.pdf
-    cbz = args.cbz
-
-    # Create series PDF?
-    pdf_series = args.pdf_series
-
-    # Overwrite PDF files if they exist
-    overwrite = args.ow
-
-    # Fetch list of URLs
-    nrof_urls = 0
-    tries = 5
-    print("Getting server URLs", end="")
-    sys.stdout.flush()
-    while nrof_urls == 0 and tries > 0:
-        title, list_of_hrefs, xmlroot = get_title_and_chapter_links(driver, url)
-        nrof_urls = len(list_of_hrefs)
-        tries = tries - 1
-        print(".", end="")
-        sys.stdout.flush()
-        time.sleep(2)
-
-    print(" Done! (%d URLs)" % len(list_of_hrefs))
-    if nrof_urls == 0:
-        print("Can't connect, or no chapters found")
-        exit(1)
-
-    # Series folder
-    series_folder = os.path.join(output_folder, title)
-
-    print("Preparing output folder: %s" % series_folder)
-    # Create folder for the series, if it doesn't exist
-    if not os.path.exists(series_folder):
-        os.makedirs(series_folder)
-
-    # Starting folder
-    start_folder = os.getcwd()
-
-    # Navigate inside the series folder
-    os.chdir(series_folder)
-
-    low_index = args.ini
-    high_index = args.end
-
-    if low_index < 1:
-        print("--ini must be larger than 0: " + low_index)
-        exit(0)
-
-    if high_index < low_index and high_index != -1:
-        print("--end must be greater or equal than --ini: [%d <= %d]" % (low_index, high_index))
-        exit(0)
-
-    if high_index == -1:
-        required_list = list_of_hrefs[low_index - 1:]
-    else:
-        required_list = list_of_hrefs[low_index - 1: high_index]
-
-    nrofchap = len(required_list)
-    goodchap = 0
-
-    print("Starting chapter download: %d to %d\n" % (low_index, high_index))
-
-    # Iterate over the list_of_hrefs for the requested chapters
-    for href in required_list:
-        # Download a chapter
-        ret = download_pages_of_one_chapter(driver, href, xmlroot,
-                                            series_folder, delay)
-        if ret:
-            goodchap = goodchap + 1
-
-    print("%d of %d chapters downloaded successfully" % (goodchap, nrofchap))
-    driver.quit()
-
-    if cbz or pdf:
-        print("Starting creation of PDF/CBZ files: %d to %d\n" % (low_index, high_index))
-
-    if cbz:
-        mypath = os.getcwd()
-        for root, dirs, files in os.walk(mypath):
+def create_cbz_pdf(args, series_folder):
+    if args.cbz:
+        for root, dirs, files in os.walk(series_folder):
             dirs.sort()
             for single_dir in dirs:
                 cbz_filename = make_filename(single_dir, 'cbz')
@@ -409,24 +337,187 @@ def process(driver):
                     if args.delete_jpg:
                         os.rmdir(single_dir)
 
-    if pdf:
+    if args.pdf:
         # Active directory is inside the series folder:
         # Create the PDF, from the chapters inside
-        mypath = os.getcwd()
-        for root, dirs, files in os.walk(mypath):
+        for root, dirs, files in os.walk(series_folder):
             dirs.sort()
             for single_dir in dirs:
                 pdfMaker.create_pdf(imageDirectory=single_dir,
-                                    bool_page0=chapter_page,
-                                    overwriteExisting=overwrite)
+                                    bool_page0=args.chapter_page,
+                                    overwriteExisting=args.overwrite)
 
-    if pdf_series:
-        # Current folder has all the .pdf of the chapter folders
-        pdfMaker.merge_pdfs(os.getcwd())
+    if args.pdf_series:
+        pdfMaker.merge_pdfs(series_folder)
 
-    # Go back to start_folder
-    os.chdir(start_folder)
 
+def process_one_url(driver, url, output_folder, args):
+    """
+    Fully process one URL, return number of chapters downloaded.
+    """
+
+    # Fetch list of URLs
+    nrof_urls = 0
+    tries = 5
+    print("Getting server URLs", end="")
+    sys.stdout.flush()
+    while nrof_urls == 0 and tries > 0:
+        title, list_of_hrefs, xmlroot, cookies = get_title_and_chapter_links(driver, url, args.reverse)
+        nrof_urls = len(list_of_hrefs)
+        tries = tries - 1
+        if title is None:
+          tries = -1
+        print(".", end="")
+        sys.stdout.flush()
+        time.sleep(2)
+
+    print(" Done! (%d URLs)" % len(list_of_hrefs))
+    if nrof_urls == 0:
+        print("Can't connect, or no chapters found")
+        return 0
+
+    driver.delete_all_cookies()
+    for cook in cookies:
+        driver.add_cookie(cook)
+
+    # Series folder
+    series_folder = os.path.join(output_folder, title)
+
+    print("Preparing output folder: %s" % series_folder)
+    # Create folder for the series, if it doesn't exist
+    if not os.path.exists(series_folder):
+        os.makedirs(series_folder)
+
+    # Navigate inside the series folder
+    os.chdir(series_folder)
+
+    if args.reverse:
+        required_list = list_of_hrefs
+    else:
+        low_index = args.ini
+        high_index = args.end
+
+        if low_index < 1:
+            print("--ini must be larger than 0: " + low_index)
+            exit(0)
+
+        if high_index < low_index and high_index != -1:
+            print("--end must be greater or equal than --ini: [%d <= %d]" % (low_index, high_index))
+            exit(0)
+
+        if high_index == -1:
+            required_list = list_of_hrefs[low_index - 1:]
+        else:
+            required_list = list_of_hrefs[low_index - 1: high_index]
+
+    nrofchap = len(required_list)
+    goodchap = 0
+
+    if args.reverse:
+        print("Starting chapter download in reverse order")
+        print()
+    else:
+        print("Starting chapter download: %d to %d\n" % (low_index, high_index))
+
+    # Iterate over the list_of_hrefs for the requested chapters
+    for href in required_list:
+        # Download a chapter
+        ret = download_pages_of_one_chapter(driver, href, xmlroot,
+                                            series_folder, args.delay)
+        if ret == 0:
+            goodchap = goodchap + 1
+        if args.reverse and ret == 1:
+            # we hit a manga we have already.
+            break
+
+    print("%d of %d chapters downloaded successfully" % (goodchap, nrofchap))
+
+    if args.cbz or args.pdf:
+        print("Starting creation of PDF/CBZ files")
+        create_cbz_pdf(args, series_folder)
+
+    return goodchap
+
+
+def process(driver):
+    base_url = "https://kissmanga.in/kissmanga/"
+
+    # Parse arguments
+    parser = argparse.ArgumentParser(description="Batch-download chapters and series from Kissmanga")
+    parser.add_argument('-o', '--output', type=str,
+                        help="Output folder path where the series folder will be created. Defaults to the current path from which this script is run")
+
+    parser_url_group = parser.add_mutually_exclusive_group(required=True)
+    parser_url_group.add_argument('-u', '--url', type=str,
+                                  help="Name of the series, no need to include the base kissmanga URL, so for 'https://kissmanga.in/kissmanga/dungeon-meshi' use 'dungeon-meshi')")
+    parser_url_group.add_argument('--batch_file', type=str,
+                                  help="Process a batch file of URL's")
+
+    parser_group = parser.add_mutually_exclusive_group(required=False)
+    parser_group.add_argument('-i', '--ini', type=int, default=1,
+                              help="Initial chapter number to download, in [1..n]")
+    parser_group.add_argument('-r', '--reverse', action='store_true',
+                              default=False,
+                              help="Download in reverse order, stop when existing downloads are found.")
+
+    parser.add_argument('-e', '--end', required=False, type=int, default=-1,
+                        help="Final chapter number to download, included")
+    parser.add_argument('--pdf', required=False, action='store_true',
+                        help="Generate a PDF file for each chapter")
+    parser.add_argument('--cbz', required=False, action='store_true',
+                        help="Generate a CBZ file for each chapter")
+    parser.add_argument('--delete_jpg', required=False, action='store_true',
+                        help="Delete jpg files after cbz creation")
+    parser.add_argument('--pdf_series', required=False, action='store_true',
+                        help="Generate a huge PDF file with all chapters")
+    parser.add_argument('--chapter_page', required=False, action='store_true',
+                        help="Render a chapter page and put it in front of the PDF of each chapter")
+    parser.add_argument('--delay', required=False, type=float, default=0.0,
+                        help="Add a delay (in seconds) between page downloads to avoid overloading the server")
+    parser.add_argument('--ow', required=False, action='store_true',
+                        help="Overwrite existing PDF files")
+
+    args = parser.parse_args()
+
+    print("Initialising kissmanga-downloader")
+
+    # Output folder
+    output_folder = os.getcwd() if args.output is None else args.output
+    try:
+        os.chdir(output_folder)
+    except Exception as e:
+        print("Unable to change directory to " + output_folder)
+        print(e)
+        sys.exit(1)
+
+    # Delay between page downloads
+    if args.delay > 0:
+        print("Using a delay of %.1f seconds" % args.delay)
+
+    if args.batch_file is not None:
+        print("Processing batch file: " + args.batch_file)
+        try:
+            with open(args.batch_file) as bfp:
+                for cnt, line in enumerate(bfp):
+                    if line[0] == '#' or len(line) < 3:
+                        continue
+                    print("Found manga {}".format(line.rstrip()))
+                    if 'kissmanga.in' in dequote(line.rstrip()):
+                        url = line.rstrip()
+                    else:
+                        url = base_url + dequote(line.rstrip())
+                    process_one_url(driver, url, output_folder, args)
+                    os.chdir(output_folder)
+        except Exception as e:
+            print(e)
+            sys.exit(1)
+    else:
+        # Get main page of the series
+        url = args.url if 'kissmanga.in' in dequote(args.url) else base_url + dequote(args.url)
+        process_one_url(driver, url, output_folder, args)
+        os.chdir(output_folder)
+
+    driver.quit()
     print("Done!")
 
 
